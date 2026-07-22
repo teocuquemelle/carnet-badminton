@@ -1,3 +1,4 @@
+
 /**
  * Service Worker — Carnet de Badminton
  * ------------------------------------------------------------
@@ -13,9 +14,7 @@
  * l'application pour forcer les appareils à récupérer la
  * dernière version au prochain passage en ligne.
  */
-
-const CACHE_VERSION = "badminton-v1";
-
+const CACHE_VERSION = "badminton-v2";
 const APP_SHELL = [
   "./index.html",
   "./manifest.json",
@@ -24,14 +23,12 @@ const APP_SHELL = [
   "https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js",
   "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"
 ];
-
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(CACHE_VERSION).then((cache) => cache.addAll(APP_SHELL))
   );
   self.skipWaiting();
 });
-
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
@@ -42,7 +39,6 @@ self.addEventListener("activate", (event) => {
   );
   self.clients.claim();
 });
-
 // Stratégie : "cache d'abord, réseau en secours" pour l'app elle-même.
 // Cela garantit un chargement instantané et fiable hors-ligne.
 // Les requêtes vers Firestore (firestore.googleapis.com) ne sont PAS
@@ -53,7 +49,6 @@ self.addEventListener("fetch", (event) => {
   if (url.includes("firestore.googleapis.com") || url.includes("google.com/apis")) {
     return; // laisser Firestore gérer ses propres requêtes
   }
-
   event.respondWith(
     caches.match(event.request).then((cached) => {
       const networkFetch = fetch(event.request)
@@ -65,7 +60,6 @@ self.addEventListener("fetch", (event) => {
           return response;
         })
         .catch(() => cached); // hors ligne : on retombe sur le cache
-
       return cached || networkFetch;
     })
   );
