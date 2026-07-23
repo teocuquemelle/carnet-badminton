@@ -13,7 +13,7 @@
  * l'application pour forcer les appareils à récupérer la
  * dernière version au prochain passage en ligne.
  */
-const CACHE_VERSION = "badminton-v5";
+const CACHE_VERSION = "badminton-v6";
 const APP_SHELL = [
   "./index.html",
   "./manifest.json",

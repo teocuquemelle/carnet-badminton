@@ -1100,6 +1100,14 @@ async function getProgressionEleve(eleveId){
   });
 }
 
+// Résultats "jaune" d'une poule sur une séance donnée — utilisé pour le
+// classement de poule (tournoi 3/2/1/0 pts) en mode "objectifs croisés".
+async function getResultatsSeancePoule(seanceId, pouleLabel){
+  const snap = await db.collection('resultats')
+    .where('SeanceID','==',seanceId).where('PouleLabel','==',pouleLabel).where('Phase','==','jaune').get();
+  return snap.docs.map(d=>({ ID:d.id, ...d.data() }));
+}
+
 async function getProgressionAll(){
   const snap = await db.collection('resultats').get();
   const elevesSnap = await db.collection('eleves').get();
@@ -1695,6 +1703,7 @@ function logoutEleve(){
   CURRENT_ELEVE=null; CURRENT_SEANCE=null; CURRENT_POULE=null; CURRENT_CHAPITRE=null; CURRENT_THEME_ID=null;
   OBJECTIFS_ACTIFS_CACHE = {}; OBJECTIFS_ACTIFS_POULE_CHARGEE = null;
   CARNET_ELEVE_SELECTIONNE = null; CARNET_VALIDE_POUR = {}; ORANGE_PERSO_ELEVE = null;
+  CLASSEMENT_POULE_CACHE = null;
   document.getElementById('eleve-code').value='';
   document.getElementById('eleve-codes-autres').value='';
   document.getElementById('eleve-numero-seance').value='';
@@ -1906,10 +1915,192 @@ function loadWarmupRecords(){
 }
 
 function renderJaune(chapitre, theme){
+  if(CURRENT_SEANCE && CURRENT_SEANCE.CarnetActif){
+    return renderJaunePersonnalise();
+  }
   const sa = theme.sa2;
   return `<div class="banniere jaune">🟡 Match à thème <span class="tag">~30 min</span></div>
     ${ficheSA(sa, "Match à thème")}
     ${renderScoreCard('jaune', theme.id)}`;
+}
+
+/* ============================================================
+   JAUNE — MODE "OBJECTIFS CROISÉS" (AFL2, séances carnet actif)
+   Un vrai match classique (+1/-1, terrain entier) entre deux membres
+   de la poule, mais chacun poursuit SON propre objectif personnel en
+   parallèle (déclaré manuellement en fin de match, comme pour un
+   essai en orange) — pas de thème unique imposé aux deux joueurs.
+   ============================================================ */
+const JAUNE_PERSO_KEY = 'jaune_objectifs-croises';
+let CLASSEMENT_POULE_CACHE = null; // { seanceId, pouleId, rows }
+
+function ensureJaunePersoState(){
+  if(!scoresLive[JAUNE_PERSO_KEY]) scoresLive[JAUNE_PERSO_KEY] = { a:0, b:0, matchIndex:0, locked:false };
+  return scoresLive[JAUNE_PERSO_KEY];
+}
+
+function renderJaunePersonnalise(){
+  const s = ensureJaunePersoState();
+  const { matchups, m } = currentMatchup('objectifs-croises', s.matchIndex);
+  const arbitreTxt = m.arbitres.length
+    ? `🧑‍⚖️ Arbitre : <strong>${m.arbitres.map(a=>a.nom).join(' et ')}</strong>`
+    : `🧑‍⚖️ Pas d'arbitre disponible dans cette poule — comptez vos points vous-mêmes.`;
+
+  const themeIdA = themeActifPourEleve(m.a.id);
+  const themeIdB = themeActifPourEleve(m.b.id);
+  const foundA = themeIdA ? findTheme(themeIdA) : null;
+  const foundB = themeIdB ? findTheme(themeIdB) : null;
+  const secoursA = !(OBJECTIFS_ACTIFS_CACHE[m.a.id] && OBJECTIFS_ACTIFS_CACHE[m.a.id].themeId);
+  const secoursB = !(OBJECTIFS_ACTIFS_CACHE[m.b.id] && OBJECTIFS_ACTIFS_CACHE[m.b.id].themeId);
+
+  const ficheJoueur = (nom, found, secours) => found ? `<div class="card" style="flex:1; min-width:220px;">
+      <p class="sub" style="margin:0 0 4px;">🎯 Objectif de <strong>${nom}</strong>${secours?' <span style="color:#e8590c;">(thème de secours)</span>':''}</p>
+      <p style="margin:0 0 6px; font-weight:700;">${found.theme.nom}</p>
+      <p class="sub" style="margin:0;"><strong>But :</strong> ${found.theme.sa2.but}</p>
+      <p class="sub" style="margin:6px 0 0;"><strong>Critère :</strong> ${found.theme.sa2.criteres}</p>
+    </div>` : `<div class="card" style="flex:1; min-width:220px;"><p class="sub">Objectif introuvable pour ${nom}.</p></div>`;
+
+  const header = `<div class="match-header"><span class="badge-match">Match ${s.matchIndex+1} / ${matchups.length}</span></div>
+    <div class="versus-line">${m.a.nom} <span class="vs">VS</span> ${m.b.nom}</div>
+    <div class="arbitre-note">${arbitreTxt}</div>`;
+
+  chargerClassementPoule().then(()=>{
+    const zone = document.getElementById('classement-poule-zone');
+    if(zone) zone.innerHTML = classementPouleHtml();
+  });
+  const classementDejaChargeIci = CLASSEMENT_POULE_CACHE && CLASSEMENT_POULE_CACHE.seanceId===CURRENT_SEANCE.ID && CLASSEMENT_POULE_CACHE.pouleId===CURRENT_POULE.id;
+
+  return `<div class="banniere jaune">🟡 Match à thème — objectifs croisés <span class="tag">~30 min</span></div>
+    <div class="card">
+      <p class="sub" style="margin:0;">Match classique, terrain entier, règles standards du badminton. Chacun poursuit en plus son propre objectif personnel ci-dessous.</p>
+    </div>
+    <div id="classement-poule-zone">${classementDejaChargeIci ? classementPouleHtml() : '<div class="card"><p class="sub">Chargement du classement…</p></div>'}</div>
+    <div class="row">${ficheJoueur(m.a.nom, foundA, secoursA)}${ficheJoueur(m.b.nom, foundB, secoursB)}</div>
+    <div class="card">${header}
+      <div class="score-panel">
+        <div class="score-card">
+          <div class="nom">${m.a.nom}</div>
+          <div class="val" id="score-a-jaune-perso">${s.a}</div>
+          <div class="score-buttons">
+            <button class="btn small secondary" ${s.locked?'disabled':''} onclick="incrJaunePerso('a',1)">+1</button>
+            <button class="btn small secondary" ${s.locked?'disabled':''} onclick="incrJaunePerso('a',-1)">-1</button>
+          </div>
+        </div>
+        <div class="score-card">
+          <div class="nom">${m.b.nom}</div>
+          <div class="val" id="score-b-jaune-perso">${s.b}</div>
+          <div class="score-buttons">
+            <button class="btn small secondary" ${s.locked?'disabled':''} onclick="incrJaunePerso('b',1)">+1</button>
+            <button class="btn small secondary" ${s.locked?'disabled':''} onclick="incrJaunePerso('b',-1)">-1</button>
+          </div>
+        </div>
+      </div>
+      <div class="row" style="margin-top:14px;">
+        <div><label>${m.a.nom} — mon objectif est atteint sur ce match ?</label>
+          <select id="jaune-perso-obj-a" ${s.locked?'disabled':''}>
+            <option value="">—</option>
+            <option value="oui">Oui ✅</option>
+            <option value="non">Non ❌</option>
+          </select>
+        </div>
+        <div><label>${m.b.nom} — mon objectif est atteint sur ce match ?</label>
+          <select id="jaune-perso-obj-b" ${s.locked?'disabled':''}>
+            <option value="">—</option>
+            <option value="oui">Oui ✅</option>
+            <option value="non">Non ❌</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-top:14px; text-align:center;">
+        <button class="btn" id="btn-enregistrer-jaune-perso" ${s.locked?'disabled':''} onclick="enregistrerJaunePerso()">
+          ${s.locked ? '⏳ Enregistrement…' : '✓ Enregistrer ce résultat'}
+        </button>
+      </div>
+    </div>`;
+}
+
+function incrJaunePerso(joueur, delta){
+  const s = ensureJaunePersoState();
+  if(s.locked) return;
+  s[joueur] = Math.max(0, s[joueur] + delta);
+  const el = document.getElementById('score-'+joueur+'-jaune-perso');
+  if(el) el.textContent = s[joueur];
+}
+
+function enregistrerJaunePerso(){
+  const s = ensureJaunePersoState();
+  if(s.locked) return;
+  const { m } = currentMatchup('objectifs-croises', s.matchIndex);
+  const themeIdA = themeActifPourEleve(m.a.id);
+  const themeIdB = themeActifPourEleve(m.b.id);
+  if(!themeIdA || !themeIdB){ alert("Thème introuvable pour l'un des deux joueurs — vérifiez la configuration de la séance."); return; }
+
+  const objA = document.getElementById('jaune-perso-obj-a').value;
+  const objB = document.getElementById('jaune-perso-obj-b').value;
+
+  s.locked = true;
+  const btn = document.getElementById('btn-enregistrer-jaune-perso');
+  if(btn){ btn.disabled = true; btn.innerText = '⏳ Enregistrement…'; }
+
+  const victoireA = s.a > s.b ? 'oui' : 'non';
+  const victoireB = s.b > s.a ? 'oui' : 'non';
+  const detailCommun = `${m.a.nom}: ${s.a} / ${m.b.nom}: ${s.b} (objectifs croisés)`;
+
+  const p1 = { seanceId: CURRENT_SEANCE.ID, eleveId: m.a.id, pouleLabel: CURRENT_POULE.id,
+    themeId: themeIdA, phase: 'jaune', niveau: '',
+    detail: `${detailCommun}. Objectif de ${m.a.nom} : ${objA==='oui'?'atteint':(objA==='non'?'non atteint':'non renseigné')}`,
+    score: `${s.a}-${s.b}`, objectifAtteint: objA, victoire: victoireA };
+  const p2 = { seanceId: CURRENT_SEANCE.ID, eleveId: m.b.id, pouleLabel: CURRENT_POULE.id,
+    themeId: themeIdB, phase: 'jaune', niveau: '',
+    detail: `${detailCommun}. Objectif de ${m.b.nom} : ${objB==='oui'?'atteint':(objB==='non'?'non atteint':'non renseigné')}`,
+    score: `${s.b}-${s.a}`, objectifAtteint: objB, victoire: victoireB };
+
+  Promise.all([saveResultat(p1), saveResultat(p2)]).then(()=>{
+    s.a = 0; s.b = 0; s.matchIndex += 1; s.locked = false;
+    CLASSEMENT_POULE_CACHE = null;
+    showToast('✅ Résultat enregistré — nouveau match !');
+    renderLeconEleve();
+  }).catch(e=>{ s.locked=false; gsFail(e); renderLeconEleve(); });
+}
+
+/* ---------- Classement de la poule (tournoi, réinitialisé chaque séance) ---------- */
+function chargerClassementPoule(){
+  if(!CURRENT_SEANCE || !CURRENT_POULE) return Promise.resolve();
+  if(CLASSEMENT_POULE_CACHE && CLASSEMENT_POULE_CACHE.seanceId===CURRENT_SEANCE.ID && CLASSEMENT_POULE_CACHE.pouleId===CURRENT_POULE.id){
+    return Promise.resolve();
+  }
+  return getResultatsSeancePoule(CURRENT_SEANCE.ID, CURRENT_POULE.id).then(rows=>{
+    CLASSEMENT_POULE_CACHE = { seanceId: CURRENT_SEANCE.ID, pouleId: CURRENT_POULE.id, rows };
+  }).catch(()=>{});
+}
+
+function computeClassementPoule(rows){
+  const parEleve = {};
+  CURRENT_POULE.membres.forEach(mem=>{ parEleve[mem.id] = { nom: mem.nom, matchs:0, victoires:0, objectifs:0, points:0 }; });
+  (rows||[]).forEach(r=>{
+    if(!parEleve[r.EleveID]) return;
+    const win = r.Victoire==='oui', obj = r.ObjectifAtteint==='oui';
+    parEleve[r.EleveID].matchs++;
+    if(win) parEleve[r.EleveID].victoires++;
+    if(obj) parEleve[r.EleveID].objectifs++;
+    parEleve[r.EleveID].points += win && obj ? 3 : (win ? 2 : (obj ? 1 : 0));
+  });
+  return Object.values(parEleve).sort((a,b)=> b.points-a.points);
+}
+
+function classementPouleHtml(){
+  if(!CLASSEMENT_POULE_CACHE) return '';
+  const classement = computeClassementPoule(CLASSEMENT_POULE_CACHE.rows);
+  let html = `<div class="card">
+    <p style="margin:0 0 8px; font-weight:700;">🏆 Classement de la poule (cette séance)</p>
+    <table><tr><th>Élève</th><th>Matchs</th><th>Victoires</th><th>Objectifs</th><th>Points</th></tr>`;
+  classement.forEach((c,i)=>{
+    html += `<tr><td>${i===0 && c.points>0 ? '🥇 ' : ''}${c.nom}</td><td>${c.matchs}</td><td>${c.victoires}</td><td>${c.objectifs}</td><td><strong>${c.points}</strong></td></tr>`;
+  });
+  html += `</table>
+    <p class="sub" style="margin-top:8px;">3 pts victoire+objectif · 2 pts victoire seule · 1 pt objectif seul · 0 sinon.</p>
+  </div>`;
+  return html;
 }
 
 let ORANGE_PERSO_ELEVE = null;
