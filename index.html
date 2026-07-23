@@ -2141,28 +2141,42 @@ function renderJauneEvaluation(){
   });
   const classementDejaChargeIci = CLASSEMENT_POULE_CACHE && CLASSEMENT_POULE_CACHE.seanceId===CURRENT_SEANCE.ID && CLASSEMENT_POULE_CACHE.pouleId===CURRENT_POULE.id;
 
+  const pips = (nb) => [0,1].map(i=>`<span style="width:24px; height:24px; border-radius:50%; display:inline-block; margin:0 3px; border:3px solid var(--orange); background:${i<nb?'var(--orange)':'transparent'}; box-shadow:${i<nb?'0 0 0 2px #fff4e6':'none'};"></span>`).join('');
+
   const historiqueHtml = s.historique.length
-    ? `<p class="sub" style="margin:6px 0 0;">${s.historique.map(h=>`Set ${h.set} : ${h.scoreA}-${h.scoreB}`).join(' · ')}</p>` : '';
+    ? `<div style="text-align:center; margin:8px 0 2px; font-size:1rem; font-weight:700; color:var(--accent);">
+        ${s.historique.map(h=>`<span style="background:#f6f4ef; border-radius:8px; padding:3px 10px; margin:0 4px; display:inline-block;">Set ${h.set} : ${h.scoreA}-${h.scoreB}</span>`).join('')}
+      </div>` : '';
 
   return `<div class="banniere jaune">🎓 Évaluation finale — règles UNSS <span class="tag">sets en 15, 2 pts d'écart, cap à 20</span></div>
-    <div class="card">
-      <p class="sub" style="margin:0;">Set en cours : <strong>${s.setEnCours}</strong> — Sets gagnés : ${m.a.nom} <strong>${s.setsA}</strong> / ${m.b.nom} <strong>${s.setsB}</strong> (2 sets gagnent le match)</p>
-      ${historiqueHtml}
-    </div>
     <div id="classement-poule-zone">${classementDejaChargeIci ? classementPouleHtml(true) : '<div class="card"><p class="sub">Chargement du classement…</p></div>'}</div>
     <div class="card">${header}
-      <div class="score-panel">
-        <div class="score-card">
+      <div style="text-align:center; margin:2px 0 10px;">
+        <span style="display:inline-block; background:var(--accent); color:#fff; font-weight:800; font-size:1.15rem; letter-spacing:.05em; padding:7px 22px; border-radius:24px;">SET ${s.setEnCours}</span>
+      </div>
+      <div style="display:flex; justify-content:center; gap:56px; margin-bottom:6px;">
+        <div style="text-align:center;">
+          <div style="font-weight:800; font-size:1.05rem; margin-bottom:6px; color:var(--accent);">${m.a.nom}</div>
+          <div>${pips(s.setsA)}</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-weight:800; font-size:1.05rem; margin-bottom:6px; color:var(--accent);">${m.b.nom}</div>
+          <div>${pips(s.setsB)}</div>
+        </div>
+      </div>
+      ${historiqueHtml}
+      <div class="score-panel" style="margin-top:18px;">
+        <div class="score-card" style="background:#fff4e6; border:2px solid var(--orange);">
           <div class="nom">${m.a.nom}</div>
-          <div class="val" id="score-a-jaune-eval">${s.scoreA}</div>
+          <div class="val" id="score-a-jaune-eval" style="font-size:3.2rem; color:var(--orange);">${s.scoreA}</div>
           <div class="score-buttons">
             <button class="btn small secondary" ${s.locked?'disabled':''} onclick="incrJauneEval('a',1)">+1</button>
             <button class="btn small secondary" ${s.locked?'disabled':''} onclick="incrJauneEval('a',-1)">-1</button>
           </div>
         </div>
-        <div class="score-card">
+        <div class="score-card" style="background:#fff4e6; border:2px solid var(--orange);">
           <div class="nom">${m.b.nom}</div>
-          <div class="val" id="score-b-jaune-eval">${s.scoreB}</div>
+          <div class="val" id="score-b-jaune-eval" style="font-size:3.2rem; color:var(--orange);">${s.scoreB}</div>
           <div class="score-buttons">
             <button class="btn small secondary" ${s.locked?'disabled':''} onclick="incrJauneEval('b',1)">+1</button>
             <button class="btn small secondary" ${s.locked?'disabled':''} onclick="incrJauneEval('b',-1)">-1</button>
@@ -4695,11 +4709,16 @@ function renderAdminSuivi(c){
       <button class="btn secondary" onclick="exportCarnetCSV()">⬇ Exporter le carnet (AFL2) en CSV</button>
       <button class="btn secondary" onclick="exportRolesCSV()">⬇ Exporter les rôles (AFL3) en CSV</button>
       <button class="btn secondary" onclick="exportTempsMortsCSV()">⬇ Exporter les temps morts (AFL3) en CSV</button>
-      <button class="btn" onclick="exportGroupeParEleveCSV()">⬇ Tout exporter, regroupé par élève (CSV)</button>
       <button class="btn secondary" onclick="nettoyerOrphelinsUI()">🧹 Nettoyer les résultats orphelins</button>
     </div>
     <div class="card">
-      <p style="margin:0 0 8px; font-weight:700;">📋 Bilan CCF par élève <span class="sub" style="font-weight:400;">(AFL1 + AFL2 + AFL3 réunis)</span></p>
+      <p style="margin:0 0 8px; font-weight:700;">📊 Bilan synthétique — toute la classe <span class="sub" style="font-weight:400;">(jauges, pour juger vite)</span></p>
+      <p class="sub" style="margin:0 0 8px;">Un élève par ligne, avec ses jauges AFL1/AFL2 et son résumé AFL3. Astuce : Ctrl+P (ou Cmd+P) pour imprimer ou exporter en PDF directement depuis le navigateur.</p>
+      <button class="btn secondary" onclick="ouvrirBilanSynthetiqueClasse()">📊 Afficher le bilan de toute la classe</button>
+      <div id="bilan-synthetique-zone" style="margin-top:12px;"></div>
+    </div>
+    <div class="card">
+      <p style="margin:0 0 8px; font-weight:700;">📋 Bilan CCF par élève <span class="sub" style="font-weight:400;">(AFL1 + AFL2 + AFL3 réunis, détail)</span></p>
       <label>Élève</label>
       <select id="bilan-ccf-eleve" onchange="chargerBilanCCF(this.value)"><option value="">— Choisir un élève —</option></select>
       <div id="bilan-ccf-zone" style="margin-top:12px;"></div>
@@ -4908,58 +4927,63 @@ function exportTempsMortsCSV(){
 // type puis par date — toutes les données d'un même élève se retrouvent
 // à la suite les unes des autres dans le fichier (pratique pour la
 // correction : un Ctrl+F sur le nom suffit).
-function exportGroupeParEleveCSV(){
-  Promise.all([getProgressionAll(), getCarnetEntriesAll(), getTempsMortsAll(), getEleves(), getSeances()])
-    .then(([resultats, carnetEntries, tempsMorts, eleves, seances])=>{
-      const eleveNom = {}; eleves.forEach(e=>eleveNom[e.ID]=e.Nom);
-      const seanceTitre = {}; seances.forEach(s=>seanceTitre[s.ID]=s.Titre+' (n°'+s.Numero+')');
-      const rolesLabels = { partenaire:"Partenaire d'entraînement", coach:"Coach", commentateur:"Commentateur" };
-      const lignes = [];
+/* ============================================================
+   BILAN SYNTHÉTIQUE VISUEL — toute la classe en un coup d'œil,
+   avec jauges (réutilise statBar). Remplace l'ancien export CSV
+   "groupé par élève" (une ligne par événement), pas assez lisible
+   pour juger vite — l'utilisateur a préféré une vue visuelle.
+   ============================================================ */
+async function calculerSyntheseClasse(){
+  const [eleves, resultatsAll, carnetAll, seances, tempsMortsAll] = await Promise.all([
+    getEleves(), getProgressionAll(), getCarnetEntriesAll(), getSeances(), getTempsMortsAll()
+  ]);
+  const seancesCarnet = seances.filter(s=>s.CarnetActif);
+  const rolesLabels = { partenaire:"🤝 Partenaire d'entraînement", coach:"🧑‍🏫 Coach", commentateur:"🎙️ Commentateur" };
 
-      resultats.forEach(r=>{
-        const t = findTheme(r.ThemeID);
-        const nomTheme = t ? t.theme.nom : (r.ThemeID==='echauffement' ? 'Échauffement' : r.ThemeID);
-        lignes.push({
-          Eleve: r.NomEleve||'', Type: r.EvaluationFinaleSeance ? 'AFL1-Évaluation' : 'AFL1-Entraînement',
-          Date: r.DateSeance||'', ThemeOuObjectif: nomTheme, Detail: `${r.Phase||''} — ${r.Detail||''}`,
-          Resultat: `Score:${r.Score||''} / Objectif:${r.ObjectifAtteint||'-'} / Victoire:${r.Victoire||'-'}`
-        });
-      });
-
-      carnetEntries.forEach(ce=>{
-        lignes.push({
-          Eleve: eleveNom[ce.EleveID]||ce.EleveID||'', Type: 'AFL2-Carnet',
-          Date: (ce.Horodatage||'').slice(0,10), ThemeOuObjectif: ce.ObjectifThemeNom||ce.ObjectifThemeID||'',
-          Detail: ce.Bilan||'', Resultat: ''
-        });
-      });
-
-      eleves.forEach(e=>{
-        const roles = Array.isArray(e.RolesAFL3) ? e.RolesAFL3 : [];
-        if(!roles.length) return;
-        lignes.push({
-          Eleve: e.Nom||'', Type: 'AFL3-Rôles', Date: '', ThemeOuObjectif: roles.map(r=>rolesLabels[r]||r).join(' + '),
-          Detail: '', Resultat: ''
-        });
-      });
-
-      tempsMorts.forEach(t=>{
-        lignes.push({
-          Eleve: t.EleveCoachNom||'', Type: 'AFL3-TempsMort', Date: (t.Horodatage||'').slice(0,10),
-          ThemeOuObjectif: seanceTitre[t.SeanceID]||t.SeanceID||'', Detail: t.Note||'', Resultat: ''
-        });
-      });
-
-      if(!lignes.length) return alert('Aucune donnée à exporter.');
-      lignes.sort((a,b)=>{
-        if(a.Eleve !== b.Eleve) return String(a.Eleve).localeCompare(String(b.Eleve));
-        if(a.Type !== b.Type) return String(a.Type).localeCompare(String(b.Type));
-        return String(a.Date).localeCompare(String(b.Date));
-      });
-      telechargerCSV_('bilan_complet_par_eleve_badminton.csv',
-        ['Eleve','Type','Date','ThemeOuObjectif','Detail','Resultat'], lignes);
-    }).catch(gsFail);
+  return eleves.map(e=>{
+    const mesResultats = resultatsAll.filter(r=>r.EleveID===e.ID);
+    const stats = computeStats(mesResultats);
+    const winEval = computeWinRate(mesResultats.filter(r=>r.EvaluationFinaleSeance));
+    const monCarnet = carnetAll.filter(c=>c.EleveID===e.ID);
+    const regularite = seancesCarnet.length ? Math.round(100*monCarnet.length/seancesCarnet.length) : null;
+    const dernierObjectif = monCarnet.slice().sort((a,b)=> new Date(b.Horodatage)-new Date(a.Horodatage))[0];
+    const roles = Array.isArray(e.RolesAFL3) ? e.RolesAFL3 : [];
+    const mesTempsMorts = tempsMortsAll.filter(t=>t.EleveCoach===e.ID);
+    return {
+      nom: e.Nom,
+      pctObjectifs: Math.round(stats.pctGlobal),
+      pctVictoiresEval: winEval.total ? Math.round(winEval.pct) : null,
+      pctRegularite: regularite,
+      dernierObjectifNom: dernierObjectif ? (dernierObjectif.ObjectifThemeNom||dernierObjectif.ObjectifThemeID) : '',
+      rolesTxt: roles.map(r=>rolesLabels[r]||r).join(' + '),
+      nbTempsMorts: mesTempsMorts.length
+    };
+  }).sort((a,b)=> String(a.nom).localeCompare(String(b.nom)));
 }
+
+function bilanSynthetiqueClasseHtml(synth){
+  if(!synth.length) return '<p class="sub">Aucun élève.</p>';
+  return synth.map(s=>`
+    <div class="card" style="margin-bottom:10px;">
+      <strong>${s.nom}</strong>
+      <div class="row" style="margin-top:8px;">
+        <div style="flex:1;">${statBar('AFL1 — objectifs (entraînement)', s.pctObjectifs, s.pctObjectifs+'%', 'var(--vert)')}</div>
+        <div style="flex:1;">${statBar('AFL1 — victoires (évaluation finale)', s.pctVictoiresEval||0, s.pctVictoiresEval===null?'aucun match éval. pour le moment':s.pctVictoiresEval+'%', 'var(--orange)')}</div>
+        <div style="flex:1;">${statBar('AFL2 — régularité du carnet', s.pctRegularite||0, s.pctRegularite===null?'aucune séance carnet pour le moment':s.pctRegularite+'%', 'var(--bleu)')}</div>
+      </div>
+      <p class="sub" style="margin-top:6px;">🎭 ${s.rolesTxt||'aucun rôle choisi'} · ⏸️ ${s.nbTempsMorts} temps mort(s) coaché(s)${s.dernierObjectifNom?(' · 🎯 objectif actuel : '+s.dernierObjectifNom):''}</p>
+    </div>`).join('');
+}
+
+function ouvrirBilanSynthetiqueClasse(){
+  const zone = document.getElementById('bilan-synthetique-zone');
+  if(!zone) return;
+  zone.innerHTML = '<p class="sub">Chargement…</p>';
+  calculerSyntheseClasse().then(synth=>{
+    zone.innerHTML = bilanSynthetiqueClasseHtml(synth);
+  }).catch(gsFail);
+}
+
 
 /* ============================================================
    OUTILS DE TEST — génère/supprime un jeu de données fictif (30
