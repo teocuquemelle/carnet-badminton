@@ -180,6 +180,9 @@
   <!-- ===================== MON CARNET (ÉLÈVE — AFL2) ===================== -->
   <div id="screen-carnet" class="hidden"></div>
 
+  <!-- ===================== ARBITRAGE (ÉLÈVE — AFL3) ===================== -->
+  <div id="screen-arbitrage" class="hidden"></div>
+
   <!-- ===================== STATISTIQUES (ÉLÈVE) ===================== -->
   <div id="screen-eleve-stats" class="hidden"></div>
 
@@ -888,6 +891,14 @@ async function deleteEleve(id){
   return true;
 }
 
+// AFL3 — rôles choisis par l'élève (partenaire d'entraînement / coach /
+// commentateur). Jamais verrouillé : l'élève peut les changer à tout
+// moment pendant la séquence, voir "Mon carnet" côté élève.
+async function updateEleveRoles(eleveId, roles){
+  await db.collection('eleves').doc(eleveId).update({ RolesAFL3: roles });
+  return true;
+}
+
 async function getSeances(){
   const snap = await db.collection('seances').get();
   return snap.docs.map(d=>({ ID:d.id, ...d.data() }));
@@ -1075,6 +1086,23 @@ async function getCarnetEntriesPourEleves(eleveIds){
 
 async function saveCarnetEntry(data){
   await db.collection('carnetEntries').add(data);
+  return true;
+}
+
+// ------------------------------------------------------------
+// TEMPS MORTS COACHING (AFL3, rôle coach) — un temps mort de la
+// situation de référence (obligatoire à 11 pts ou optionnel au choix
+// du partenaire, voir référentiel) = une entrée : qui coache, quel
+// conseil a été donné. Trace datée exploitable par l'enseignant.
+// ------------------------------------------------------------
+async function getTempsMortsSeancePoule(seanceId, pouleLabel){
+  const snap = await db.collection('tempsMorts')
+    .where('SeanceID','==',seanceId).where('PouleLabel','==',pouleLabel).get();
+  return snap.docs.map(d=>({ ID:d.id, ...d.data() }));
+}
+
+async function saveTempsMort(data){
+  await db.collection('tempsMorts').add(data);
   return true;
 }
 
@@ -1334,6 +1362,7 @@ function eleveHubTabsHtml(actif){
     <div class="tab ${actif==='techniques'?'active':''}" onclick="ouvrirOngletTechniques()">Techniques</div>
     <div class="tab ${actif==='stats'?'active':''}" onclick="renderEleveStats()">Statistiques</div>
     <div class="tab ${actif==='carnet'?'active':''}" onclick="ouvrirOngletCarnet()">📓 Mon carnet</div>
+    <div class="tab ${actif==='arbitrage'?'active':''}" onclick="ouvrirOngletArbitrage()">🧑‍⚖️ Arbitrage</div>
   </div>`;
 }
 
@@ -1411,6 +1440,44 @@ function ouvrirTechniqueDetail(id){
 }
 
 /* ============================================================
+   ONGLET ÉLÈVE — ARBITRAGE (AFL3, rôle de fait dans les matchs de
+   poule). Contenu de référence statique, pas de CRUD admin pour
+   l'instant — comme un mini "Techniques" dédié aux règles et gestes.
+   ============================================================ */
+function ouvrirOngletArbitrage(){
+  renderArbitrage();
+  showScreen('screen-arbitrage');
+}
+
+const ARBITRAGE_FICHES = [
+  { titre: "Le score en un coup d'œil",
+    texte: "Chaque échange rapporte un point, que ce soit le serveur ou le relanceur qui le gagne (système \"rally point\").\n\nUn set se joue en 21 points, avec 2 points d'écart minimum pour l'emporter. Si le score atteint 29-29, le premier à 30 gagne le set.\n\nLe match se joue au meilleur des 3 sets. Changement de côté après chaque set, et à 11 points dans le set décisif." },
+  { titre: "Les fautes les plus fréquentes",
+    texte: "Volant hors des limites du terrain (\"dehors\").\n\nVolant qui ne passe pas au-dessus du filet, ou qui touche le filet en dehors d'une frappe (le frôler pendant la frappe reste autorisé si le volant passe correctement).\n\nDouble frappe d'un même joueur, ou volant touché par les deux joueurs d'une paire successivement dans le désordre.\n\nRaquette, corps ou vêtement touchant le filet ou passant au-dessus pendant le jeu.\n\nObstruction du jeu de l'adversaire (gêner sa frappe).\n\nFaute de service : mauvaise zone, pied qui bouge avant la frappe, volant frappé trop haut ou raquette mal orientée au moment du contact." },
+  { titre: "Le rôle de l'arbitre en cours scolaire",
+    texte: "Annonce le score avant chaque service (serveur d'abord, ex. \"11-8\").\n\nSignale clairement une faute dès qu'elle se produit, en désignant si possible où le volant est tombé.\n\nEn cas de doute ou de désaccord entre les deux joueurs, l'arbitre tranche — c'est son rôle, pas celui des joueurs.\n\nReste attentif en continu : un bon arbitrage demande de ne pas se laisser distraire entre deux échanges." },
+  { titre: "Quelques gestes utiles",
+    texte: "Bras levé, paume ouverte vers le terrain fautif : signale une faute et de quel côté.\n\nDoigt pointé vers le sol à l'endroit exact : précise où le volant est tombé \"dehors\".\n\nLes deux mains à plat qui se croisent : signale un \"let\" (échange à rejouer, sans faute de personne).\n\nCes gestes ne remplacent pas la voix : annoncez toujours la faute ou le score à voix haute en même temps." }
+];
+
+function renderArbitrage(){
+  const el = document.getElementById('screen-arbitrage');
+  const retour = CURRENT_SEANCE
+    ? `<p class="link" onclick="renderLeconEleve(); showScreen('screen-eleve')">&larr; retour à la séance</p>`
+    : eleveHubTabsHtml('arbitrage');
+  el.innerHTML = `${retour}
+    <h1>🧑‍⚖️ Arbitrage</h1>
+    <p class="sub">Règles et repères utiles pour arbitrer un match de la poule (rôle AFL3).</p>
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      ${ARBITRAGE_FICHES.map(f=>`
+        <div class="card">
+          <p style="margin:0 0 8px; font-weight:700;">${f.titre}</p>
+          <p class="sub" style="white-space:pre-wrap; line-height:1.6; margin:0;">${f.texte}</p>
+        </div>`).join('')}
+    </div>`;
+}
+
+/* ============================================================
    ONGLET ÉLÈVE — MON CARNET (AFL2, entraînement individualisé)
    Visible uniquement si CURRENT_SEANCE.CarnetActif est vrai.
    ============================================================ */
@@ -1443,36 +1510,110 @@ function renderCarnet(){
   const el = document.getElementById('screen-carnet');
   if(!CURRENT_POULE){
     el.innerHTML = `${eleveHubTabsHtml('carnet')}
-      <h1>📓 Mon carnet d'entraînement</h1>
+      <h1>📓 Mon carnet & mes rôles</h1>
       <div class="card">
-        <p class="sub">Connecte-toi d'abord à ta séance (numéro + codes) dans l'onglet "Leçon du jour" — le carnet s'affichera ensuite ici si ton enseignant l'a activé pour cette séance.</p>
+        <p class="sub">Connecte-toi d'abord à ta séance (numéro + codes) dans l'onglet "Leçon du jour" — le carnet et le choix de tes rôles AFL3 s'afficheront ensuite ici.</p>
         <button class="btn" onclick="ouvrirOngletLecon()">Aller à "Leçon du jour"</button>
       </div>`;
     return;
   }
-  if(!CURRENT_SEANCE.CarnetActif){
-    el.innerHTML = `${eleveHubTabsHtml('carnet')}
-      <h1>📓 Mon carnet d'entraînement</h1>
-      <div class="card">
-        <p class="sub">Le carnet n'est pas activé pour la séance en cours (${CURRENT_SEANCE.Titre || 'séance n°'+CURRENT_SEANCE.Numero}). Ton enseignant l'active certaines séances seulement, pour l'entraînement individualisé.</p>
-      </div>`;
-    return;
+  if(!CARNET_ELEVE_SELECTIONNE || !CURRENT_POULE.membres.some(m=>m.id===CARNET_ELEVE_SELECTIONNE)){
+    CARNET_ELEVE_SELECTIONNE = CURRENT_POULE.membres[0].id;
   }
   const eleveId = CARNET_ELEVE_SELECTIONNE;
-  const verrouKey = eleveId+'_'+CURRENT_SEANCE.ID;
-  const dejaValide = !!CARNET_VALIDE_POUR[verrouKey];
+
+  let corpsCarnet;
+  if(!CURRENT_SEANCE.CarnetActif){
+    corpsCarnet = `<div class="card">
+      <p class="sub">Le carnet d'entraînement individualisé n'est pas activé pour la séance en cours (${CURRENT_SEANCE.Titre || 'séance n°'+CURRENT_SEANCE.Numero}). Ton enseignant l'active certaines séances seulement.</p>
+    </div>`;
+  } else {
+    corpsCarnet = `<div id="carnet-contenu"><div class="card"><p class="sub">Chargement de l'araignée…</p></div></div>`;
+  }
 
   el.innerHTML = `${eleveHubTabsHtml('carnet')}
-    <h1>📓 Mon carnet d'entraînement</h1>
-    <p class="sub">Fixe ton axe de travail pour la prochaine séance individualisée, en fonction de ton araignée.</p>
+    <h1>📓 Mon carnet & mes rôles</h1>
     <div class="card">
-      <label>C'est le carnet de qui ?</label>
+      <label>C'est le carnet / les rôles de qui ?</label>
       <select id="carnet-qui" onchange="changerCarnetEleve()">
         ${CURRENT_POULE.membres.map(m=>`<option value="${m.id}" ${m.id===eleveId?'selected':''}>${m.nom}</option>`).join('')}
       </select>
     </div>
-    <div id="carnet-contenu"><div class="card"><p class="sub">Chargement de l'araignée…</p></div></div>`;
-  chargerCarnetContenu(eleveId, dejaValide);
+    <div id="roles-afl3-zone">${rolesAFL3Html(eleveId)}</div>
+    <h2 style="margin:20px 0 6px;">🏸 Carnet d'entraînement individualisé (AFL2)</h2>
+    ${corpsCarnet}`;
+
+  chargerRolesEleves().then(()=>{
+    const zone = document.getElementById('roles-afl3-zone');
+    if(zone) zone.innerHTML = rolesAFL3Html(eleveId);
+  });
+
+  if(CURRENT_SEANCE.CarnetActif){
+    const verrouKey = eleveId+'_'+CURRENT_SEANCE.ID;
+    const dejaValide = !!CARNET_VALIDE_POUR[verrouKey];
+    chargerCarnetContenu(eleveId, dejaValide);
+  }
+}
+
+/* ============================================================
+   AFL3 — CHOIX DES RÔLES (jamais verrouillé, modifiable à tout
+   moment). Stocké directement sur le document eleves (RolesAFL3).
+   ============================================================ */
+let ROLES_ELEVES_CACHE = {}; // eleveId -> [roles]
+let ROLES_ELEVES_POULE_CHARGEE = null;
+const ROLES_AFL3_DISPONIBLES = [
+  { id:'partenaire', label:"🤝 Partenaire d'entraînement" },
+  { id:'coach', label:"🧑‍🏫 Coach" },
+  { id:'commentateur', label:"🎙️ Commentateur" }
+];
+
+function chargerRolesEleves(){
+  if(!CURRENT_POULE) return Promise.resolve();
+  if(ROLES_ELEVES_POULE_CHARGEE === CURRENT_POULE.id) return Promise.resolve();
+  return getEleves().then(list=>{
+    ROLES_ELEVES_CACHE = {};
+    (list||[]).forEach(e=>{ ROLES_ELEVES_CACHE[e.ID] = Array.isArray(e.RolesAFL3) ? e.RolesAFL3 : []; });
+    ROLES_ELEVES_POULE_CHARGEE = CURRENT_POULE.id;
+  }).catch(()=>{});
+}
+
+function rolesAFL3Html(eleveId){
+  const rolesActuels = ROLES_ELEVES_CACHE[eleveId] || [];
+  return `<div class="card" style="border-color:#7048e8;">
+    <p style="margin:0 0 8px; font-weight:700;">🎭 Mes rôles AFL3 <span class="sub" style="font-weight:400;">(2 maximum, modifiables à tout moment)</span></p>
+    <div style="display:flex; flex-direction:column; gap:6px;">
+      ${ROLES_AFL3_DISPONIBLES.map(r=>`
+        <label style="display:flex; align-items:center; gap:8px; font-weight:400;">
+          <input type="checkbox" style="width:auto;" value="${r.id}" ${rolesActuels.includes(r.id)?'checked':''}
+            onchange="toggleRoleAFL3('${eleveId}', '${r.id}', this.checked)">
+          ${r.label}
+        </label>`).join('')}
+    </div>
+    <div id="roles-afl3-msg" class="sub" style="margin-top:6px;"></div>
+  </div>`;
+}
+
+function toggleRoleAFL3(eleveId, roleId, checked){
+  let roles = ROLES_ELEVES_CACHE[eleveId] || [];
+  if(checked){
+    if(!roles.includes(roleId)){
+      if(roles.length >= 2){
+        alert("Maximum 2 rôles à la fois — décoche-en un avant d'en choisir un nouveau.");
+        const zone = document.getElementById('roles-afl3-zone');
+        if(zone) zone.innerHTML = rolesAFL3Html(eleveId);
+        return;
+      }
+      roles = roles.concat([roleId]);
+    }
+  } else {
+    roles = roles.filter(r=>r!==roleId);
+  }
+  ROLES_ELEVES_CACHE[eleveId] = roles;
+  const msg = document.getElementById('roles-afl3-msg');
+  if(msg) msg.textContent = '⏳ Enregistrement…';
+  updateEleveRoles(eleveId, roles).then(()=>{
+    if(msg) msg.textContent = '✅ Enregistré';
+  }).catch(e=>{ if(msg) msg.textContent = ''; gsFail(e); });
 }
 
 function chargerCarnetContenu(eleveId, dejaValide){
@@ -1705,7 +1846,7 @@ function logoutEleve(){
   CURRENT_ELEVE=null; CURRENT_SEANCE=null; CURRENT_POULE=null; CURRENT_CHAPITRE=null; CURRENT_THEME_ID=null;
   OBJECTIFS_ACTIFS_CACHE = {}; OBJECTIFS_ACTIFS_POULE_CHARGEE = null;
   CARNET_ELEVE_SELECTIONNE = null; CARNET_VALIDE_POUR = {}; ORANGE_PERSO_ELEVE = null;
-  CLASSEMENT_POULE_CACHE = null;
+  CLASSEMENT_POULE_CACHE = null; TEMPS_MORTS_CACHE = null;
   document.getElementById('eleve-code').value='';
   document.getElementById('eleve-codes-autres').value='';
   document.getElementById('eleve-numero-seance').value='';
@@ -2173,7 +2314,72 @@ function renderBleu(chapitre, theme){
       <tr><td class="label">Règle spéciale du jour</td><td>${regle}</td></tr>
     </table>
     ${diagramHtml}
-    ${renderScoreCard('bleu', theme.id)}`;
+    ${renderScoreCard('bleu', theme.id)}
+    ${tempsMortHtml()}`;
+}
+
+/* ============================================================
+   AFL3 — RÔLE COACH : temps morts de la situation de référence
+   (obligatoire à 11 pts, ou optionnel au choix du partenaire, voir
+   référentiel AFL1). Trace datée du conseil donné par le coach.
+   ============================================================ */
+let TEMPS_MORTS_CACHE = null; // { seanceId, pouleId, rows }
+
+function chargerTempsMorts(){
+  if(!CURRENT_SEANCE || !CURRENT_POULE) return Promise.resolve();
+  if(TEMPS_MORTS_CACHE && TEMPS_MORTS_CACHE.seanceId===CURRENT_SEANCE.ID && TEMPS_MORTS_CACHE.pouleId===CURRENT_POULE.id) return Promise.resolve();
+  return getTempsMortsSeancePoule(CURRENT_SEANCE.ID, CURRENT_POULE.id).then(rows=>{
+    rows.sort((a,b)=> new Date(b.Horodatage) - new Date(a.Horodatage));
+    TEMPS_MORTS_CACHE = { seanceId: CURRENT_SEANCE.ID, pouleId: CURRENT_POULE.id, rows: rows };
+  }).catch(()=>{});
+}
+
+function tempsMortHtml(){
+  chargerTempsMorts().then(()=>{
+    const zone = document.getElementById('tempsmort-zone');
+    if(zone) zone.innerHTML = tempsMortListeHtml();
+  });
+  const dejaCharge = TEMPS_MORTS_CACHE && TEMPS_MORTS_CACHE.seanceId===CURRENT_SEANCE.ID && TEMPS_MORTS_CACHE.pouleId===CURRENT_POULE.id;
+  return `<div class="card">
+    <p style="margin:0 0 4px; font-weight:700;">⏸️ Temps mort coaching (AFL3)</p>
+    <p class="sub" style="margin:0 0 10px;">Au temps mort obligatoire (11 pts) ou optionnel de la situation de référence : le coach note ici le conseil donné à son partenaire.</p>
+    <div class="row">
+      <div><label>Qui coache ?</label>${pouleSelectHtml('tempsmort-coach')}</div>
+    </div>
+    <label>Conseil donné</label>
+    <textarea id="tempsmort-note" rows="2" placeholder="Ex : lève plus la raquette avant le service"></textarea>
+    <button class="btn secondary" onclick="enregistrerTempsMort()">+ Enregistrer ce temps mort</button>
+    <div id="tempsmort-zone" style="margin-top:10px;">${dejaCharge ? tempsMortListeHtml() : '<p class="sub">Chargement…</p>'}</div>
+  </div>`;
+}
+
+function tempsMortListeHtml(){
+  if(!TEMPS_MORTS_CACHE || !TEMPS_MORTS_CACHE.rows.length) return '<p class="sub">Aucun temps mort noté pour l\'instant sur cette séance.</p>';
+  return '<div style="display:flex; flex-direction:column; gap:6px;">' + TEMPS_MORTS_CACHE.rows.map(r=>
+    `<div class="sub" style="border-left:3px solid #7048e8; padding-left:8px;"><strong>${r.EleveCoachNom}</strong> : ${(r.Note||'').replace(/</g,'&lt;')}</div>`
+  ).join('') + '</div>';
+}
+
+function enregistrerTempsMort(){
+  const coachSelect = document.getElementById('tempsmort-coach');
+  const noteField = document.getElementById('tempsmort-note');
+  if(!coachSelect || !noteField) return;
+  const coachId = coachSelect.value;
+  const note = noteField.value.trim();
+  if(!note){ alert("Note le conseil donné avant d'enregistrer."); return; }
+  const nom = (CURRENT_POULE.membres.find(m=>m.id===coachId)||{}).nom || '';
+  saveTempsMort({
+    SeanceID: CURRENT_SEANCE.ID, PouleLabel: CURRENT_POULE.id,
+    EleveCoach: coachId, EleveCoachNom: nom, Note: note, Horodatage: new Date().toISOString()
+  }).then(()=>{
+    TEMPS_MORTS_CACHE = null;
+    noteField.value = '';
+    showToast('✅ Temps mort enregistré');
+    chargerTempsMorts().then(()=>{
+      const zone = document.getElementById('tempsmort-zone');
+      if(zone) zone.innerHTML = tempsMortListeHtml();
+    });
+  }).catch(gsFail);
 }
 
 function ficheSA(sa, titre){
