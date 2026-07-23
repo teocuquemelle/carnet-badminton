@@ -1953,12 +1953,15 @@ function renderJaunePersonnalise(){
   const secoursA = !(OBJECTIFS_ACTIFS_CACHE[m.a.id] && OBJECTIFS_ACTIFS_CACHE[m.a.id].themeId);
   const secoursB = !(OBJECTIFS_ACTIFS_CACHE[m.b.id] && OBJECTIFS_ACTIFS_CACHE[m.b.id].themeId);
 
-  const ficheJoueur = (nom, found, secours) => found ? `<div class="card" style="flex:1; min-width:220px;">
+  const ficheJoueur = (nom, found, secours) => {
+    if(!found) return `<div class="card" style="flex:1; min-width:220px;"><p class="sub">Objectif introuvable pour ${nom}.</p></div>`;
+    const sa2 = found.theme.sa2;
+    return `<div class="card" style="flex:1; min-width:220px;">
       <p class="sub" style="margin:0 0 4px;">🎯 Objectif de <strong>${nom}</strong>${secours?' <span style="color:#e8590c;">(thème de secours)</span>':''}</p>
       <p style="margin:0 0 6px; font-weight:700;">${found.theme.nom}</p>
-      <p class="sub" style="margin:0;"><strong>But :</strong> ${found.theme.sa2.but}</p>
-      <p class="sub" style="margin:6px 0 0;"><strong>Critère :</strong> ${found.theme.sa2.criteres}</p>
-    </div>` : `<div class="card" style="flex:1; min-width:220px;"><p class="sub">Objectif introuvable pour ${nom}.</p></div>`;
+      <p class="sub" style="margin:0;"><strong>Consigne :</strong> ${sa2.consignes}</p>
+    </div>`;
+  };
 
   const header = `<div class="match-header"><span class="badge-match">Match ${s.matchIndex+1} / ${matchups.length}</span></div>
     <div class="versus-line">${m.a.nom} <span class="vs">VS</span> ${m.b.nom}</div>
@@ -1973,6 +1976,7 @@ function renderJaunePersonnalise(){
   return `<div class="banniere jaune">🟡 Match à thème — objectifs croisés <span class="tag">~30 min</span></div>
     <div class="card">
       <p class="sub" style="margin:0;">Match classique, terrain entier, règles standards du badminton. Chacun poursuit en plus son propre objectif personnel ci-dessous.</p>
+      <p class="sub" style="margin:8px 0 0;">⚠️ La consigne de chaque objectif peut mentionner un bouton ou un mode de score spécifique (mort subite, barème...) — ici, ça ne s'applique pas : repère juste si tu remplis ton critère pendant le jeu, et déclare-le toi-même en fin de match ci-dessous.</p>
     </div>
     <div id="classement-poule-zone">${classementDejaChargeIci ? classementPouleHtml() : '<div class="card"><p class="sub">Chargement du classement…</p></div>'}</div>
     <div class="row">${ficheJoueur(m.a.nom, foundA, secoursA)}${ficheJoueur(m.b.nom, foundB, secoursB)}</div>
