@@ -904,10 +904,10 @@ async function getSeances(){
   return snap.docs.map(d=>({ ID:d.id, ...d.data() }));
 }
 
-async function createSeance(date, chapitreId, themeId, titre, numero, carnetActif){
+async function createSeance(date, chapitreId, themeId, titre, numero, carnetActif, evaluationFinale){
   await db.collection('seances').add({
     Date: date, ChapitreID: chapitreId, ThemeID: String(themeId), Titre: titre, Numero: Number(numero),
-    CarnetActif: !!carnetActif
+    CarnetActif: !!carnetActif, EvaluationFinale: !!evaluationFinale
   });
   return true;
 }
@@ -1089,6 +1089,13 @@ async function saveCarnetEntry(data){
   return true;
 }
 
+// Toutes les entrées carnet, toutes séances/élèves confondus — utilisé
+// côté admin (Bilan CCF, export, régularité de remplissage).
+async function getCarnetEntriesAll(){
+  const snap = await db.collection('carnetEntries').get();
+  return snap.docs.map(d=>({ ID:d.id, ...d.data() }));
+}
+
 // ------------------------------------------------------------
 // TEMPS MORTS COACHING (AFL3, rôle coach) — un temps mort de la
 // situation de référence (obligatoire à 11 pts ou optionnel au choix
@@ -1104,6 +1111,14 @@ async function getTempsMortsSeancePoule(seanceId, pouleLabel){
 async function saveTempsMort(data){
   await db.collection('tempsMorts').add(data);
   return true;
+}
+
+// Tous les temps morts, toutes séances confondues — utilisé côté admin
+// (Bilan CCF par élève, export). Filtrage par coach fait côté client
+// pour éviter un index composite Firestore supplémentaire.
+async function getTempsMortsAll(){
+  const snap = await db.collection('tempsMorts').get();
+  return snap.docs.map(d=>({ ID:d.id, ...d.data() }));
 }
 
 async function saveResultat(resultat){
@@ -1125,7 +1140,8 @@ async function getProgressionEleve(eleveId){
     const r = d.data();
     const s = seances[r.SeanceID];
     return Object.assign({}, r, {
-      DateSeance: s ? s.Date : '', NumeroSeance: s ? s.Numero : '', TitreSeance: s ? s.Titre : ''
+      DateSeance: s ? s.Date : '', NumeroSeance: s ? s.Numero : '', TitreSeance: s ? s.Titre : '',
+      EvaluationFinaleSeance: s ? !!s.EvaluationFinale : false, CarnetActifSeance: s ? !!s.CarnetActif : false
     });
   });
 }
@@ -1146,10 +1162,13 @@ async function getProgressionAll(){
   const seances = {}; seancesSnap.docs.forEach(d=>seances[d.id]=d.data());
   return snap.docs.map(d=>{
     const r = d.data();
+    const s = seances[r.SeanceID];
     return Object.assign({}, r, {
       NomEleve: eleves[r.EleveID] ? eleves[r.EleveID].Nom : '?',
-      DateSeance: seances[r.SeanceID] ? seances[r.SeanceID].Date : '',
-      TitreSeance: seances[r.SeanceID] ? seances[r.SeanceID].Titre : ''
+      DateSeance: s ? s.Date : '',
+      TitreSeance: s ? s.Titre : '',
+      EvaluationFinaleSeance: s ? !!s.EvaluationFinale : false,
+      CarnetActifSeance: s ? !!s.CarnetActif : false
     });
   });
 }
@@ -1860,6 +1879,10 @@ function renderLeconEleve(){
   const membres = CURRENT_POULE.membres.map(m=>m.nom).join(', ');
   sauvegarderSession();
 
+  if(CURRENT_SEANCE.EvaluationFinale && (phaseActuelle==='orange' || phaseActuelle==='bleu')){
+    phaseActuelle = 'jaune';
+  }
+
   if(CURRENT_SEANCE.CarnetActif){
     chargerObjectifsActifs().then(()=>{
       if(phaseActuelle==='orange' && !document.getElementById('screen-eleve').classList.contains('hidden')){
@@ -1869,16 +1892,18 @@ function renderLeconEleve(){
     });
   }
 
+  const phasesActives = CURRENT_SEANCE.EvaluationFinale ? PHASES.filter(p=>p.key==='vert'||p.key==='jaune') : PHASES;
+
   let html = `
     <div class="topbar">
       <p class="link" onclick="logoutEleve()">&larr; déconnexion</p>
       ${CURRENT_SEANCE.CarnetActif ? `<p class="link" onclick="ouvrirOngletCarnet()">📓 Mon carnet</p>` : ''}
       <p class="link" onclick="renderMaProgression()">Ma progression &rarr;</p>
     </div>
-    <h1>${theme.nom}</h1>
-    <div class="sub">Poule : ${membres}${CURRENT_SEANCE.CarnetActif ? ' · <span style="color:#7048e8; font-weight:700;">📓 séance individualisée</span>' : ''}</div>
+    <h1>${CURRENT_SEANCE.EvaluationFinale ? "🎓 Évaluation finale" : theme.nom}</h1>
+    <div class="sub">Poule : ${membres}${CURRENT_SEANCE.CarnetActif ? ' · <span style="color:#7048e8; font-weight:700;">📓 séance individualisée</span>' : ''}${CURRENT_SEANCE.EvaluationFinale ? ' · <span style="color:#e8590c; font-weight:700;">🎓 mode évaluation — pas de bonus</span>' : ''}</div>
     <div class="phase-nav">`;
-  PHASES.forEach(p=>{
+  phasesActives.forEach(p=>{
     const cls = p.key===phaseActuelle ? 'active '+p.key : '';
     html += `<div class="phase-pill ${cls}" onclick="phaseActuelle='${p.key}'; renderLeconEleve();">${p.label}</div>`;
   });
@@ -2058,6 +2083,9 @@ function loadWarmupRecords(){
 }
 
 function renderJaune(chapitre, theme){
+  if(CURRENT_SEANCE && CURRENT_SEANCE.EvaluationFinale){
+    return renderJauneEvaluation();
+  }
   if(CURRENT_SEANCE && CURRENT_SEANCE.CarnetActif){
     return renderJaunePersonnalise();
   }
@@ -2065,6 +2093,103 @@ function renderJaune(chapitre, theme){
   return `<div class="banniere jaune">🟡 Match à thème <span class="tag">~30 min</span></div>
     ${ficheSA(sa, "Match à thème")}
     ${renderScoreCard('jaune', theme.id)}`;
+}
+
+/* ============================================================
+   ÉVALUATION FINALE (mode "vierge", L14-L15) — échauffement +
+   match classique uniquement, règles UNSS, pas de bonus ni de
+   thème, classement automatique de la poule.
+   ============================================================ */
+const JAUNE_EVAL_KEY = 'jaune_evaluation-finale';
+
+function ensureJauneEvalState(){
+  if(!scoresLive[JAUNE_EVAL_KEY]) scoresLive[JAUNE_EVAL_KEY] = { a:0, b:0, matchIndex:0, locked:false };
+  return scoresLive[JAUNE_EVAL_KEY];
+}
+
+function renderJauneEvaluation(){
+  const s = ensureJauneEvalState();
+  const { matchups, m } = currentMatchup('evaluation-finale', s.matchIndex);
+  const arbitreTxt = m.arbitres.length
+    ? `🧑‍⚖️ Arbitre : <strong>${m.arbitres.map(a=>a.nom).join(' et ')}</strong>`
+    : `🧑‍⚖️ Pas d'arbitre disponible dans cette poule — comptez vos points vous-mêmes.`;
+
+  const header = `<div class="match-header"><span class="badge-match">Match ${s.matchIndex+1} / ${matchups.length}</span></div>
+    <div class="versus-line">${m.a.nom} <span class="vs">VS</span> ${m.b.nom}</div>
+    <div class="arbitre-note">${arbitreTxt}</div>`;
+
+  chargerClassementPoule().then(()=>{
+    const zone = document.getElementById('classement-poule-zone');
+    if(zone) zone.innerHTML = classementPouleHtml(true);
+  });
+  const classementDejaChargeIci = CLASSEMENT_POULE_CACHE && CLASSEMENT_POULE_CACHE.seanceId===CURRENT_SEANCE.ID && CLASSEMENT_POULE_CACHE.pouleId===CURRENT_POULE.id;
+
+  return `<div class="banniere jaune">🎓 Évaluation finale — match classique <span class="tag">règles UNSS</span></div>
+    <div class="card">
+      <p class="sub" style="margin:0;">Match classique, terrain entier, un point par échange gagné. Pas de bonus, pas de thème — seul le résultat compte pour le classement.</p>
+    </div>
+    <div id="classement-poule-zone">${classementDejaChargeIci ? classementPouleHtml(true) : '<div class="card"><p class="sub">Chargement du classement…</p></div>'}</div>
+    <div class="card">${header}
+      <div class="score-panel">
+        <div class="score-card">
+          <div class="nom">${m.a.nom}</div>
+          <div class="val" id="score-a-jaune-eval">${s.a}</div>
+          <div class="score-buttons">
+            <button class="btn small secondary" ${s.locked?'disabled':''} onclick="incrJauneEval('a',1)">+1</button>
+            <button class="btn small secondary" ${s.locked?'disabled':''} onclick="incrJauneEval('a',-1)">-1</button>
+          </div>
+        </div>
+        <div class="score-card">
+          <div class="nom">${m.b.nom}</div>
+          <div class="val" id="score-b-jaune-eval">${s.b}</div>
+          <div class="score-buttons">
+            <button class="btn small secondary" ${s.locked?'disabled':''} onclick="incrJauneEval('b',1)">+1</button>
+            <button class="btn small secondary" ${s.locked?'disabled':''} onclick="incrJauneEval('b',-1)">-1</button>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:14px; text-align:center;">
+        <button class="btn" id="btn-enregistrer-jaune-eval" ${s.locked?'disabled':''} onclick="enregistrerJauneEval()">
+          ${s.locked ? '⏳ Enregistrement…' : '✓ Enregistrer ce résultat'}
+        </button>
+      </div>
+    </div>`;
+}
+
+function incrJauneEval(joueur, delta){
+  const s = ensureJauneEvalState();
+  if(s.locked) return;
+  s[joueur] = Math.max(0, s[joueur] + delta);
+  const el = document.getElementById('score-'+joueur+'-jaune-eval');
+  if(el) el.textContent = s[joueur];
+}
+
+function enregistrerJauneEval(){
+  const s = ensureJauneEvalState();
+  if(s.locked) return;
+  const { m } = currentMatchup('evaluation-finale', s.matchIndex);
+
+  s.locked = true;
+  const btn = document.getElementById('btn-enregistrer-jaune-eval');
+  if(btn){ btn.disabled = true; btn.innerText = '⏳ Enregistrement…'; }
+
+  const victoireA = s.a > s.b ? 'oui' : 'non';
+  const victoireB = s.b > s.a ? 'oui' : 'non';
+  const detailCommun = `${m.a.nom}: ${s.a} / ${m.b.nom}: ${s.b} (évaluation finale)`;
+
+  const p1 = { seanceId: CURRENT_SEANCE.ID, eleveId: m.a.id, pouleLabel: CURRENT_POULE.id,
+    themeId: CURRENT_THEME_ID, phase: 'jaune', niveau: '',
+    detail: detailCommun, score: `${s.a}-${s.b}`, objectifAtteint: '', victoire: victoireA };
+  const p2 = { seanceId: CURRENT_SEANCE.ID, eleveId: m.b.id, pouleLabel: CURRENT_POULE.id,
+    themeId: CURRENT_THEME_ID, phase: 'jaune', niveau: '',
+    detail: detailCommun, score: `${s.b}-${s.a}`, objectifAtteint: '', victoire: victoireB };
+
+  Promise.all([saveResultat(p1), saveResultat(p2)]).then(()=>{
+    s.a = 0; s.b = 0; s.matchIndex += 1; s.locked = false;
+    CLASSEMENT_POULE_CACHE = null;
+    showToast('✅ Résultat enregistré — nouveau match !');
+    renderLeconEleve();
+  }).catch(e=>{ s.locked=false; gsFail(e); renderLeconEleve(); });
 }
 
 /* ============================================================
@@ -2237,17 +2362,17 @@ function computeClassementPoule(rows){
   return Object.values(parEleve).sort((a,b)=> b.points-a.points);
 }
 
-function classementPouleHtml(){
+function classementPouleHtml(simple){
   if(!CLASSEMENT_POULE_CACHE) return '';
   const classement = computeClassementPoule(CLASSEMENT_POULE_CACHE.rows);
   let html = `<div class="card">
     <p style="margin:0 0 8px; font-weight:700;">🏆 Classement de la poule (cette séance)</p>
-    <table><tr><th>Élève</th><th>Matchs</th><th>Victoires</th><th>Objectifs</th><th>Points</th></tr>`;
+    <table><tr><th>Élève</th><th>Matchs</th><th>Victoires</th>${simple?'':'<th>Objectifs</th>'}<th>Points</th></tr>`;
   classement.forEach((c,i)=>{
-    html += `<tr><td>${i===0 && c.points>0 ? '🥇 ' : ''}${c.nom}</td><td>${c.matchs}</td><td>${c.victoires}</td><td>${c.objectifs}</td><td><strong>${c.points}</strong></td></tr>`;
+    html += `<tr><td>${i===0 && c.points>0 ? '🥇 ' : ''}${c.nom}</td><td>${c.matchs}</td><td>${c.victoires}</td>${simple?'':'<td>'+c.objectifs+'</td>'}<td><strong>${c.points}</strong></td></tr>`;
   });
   html += `</table>
-    <p class="sub" style="margin-top:8px;">3 pts victoire+objectif · 2 pts victoire seule · 1 pt objectif seul · 0 sinon.</p>
+    <p class="sub" style="margin-top:8px;">${simple ? '2 pts par victoire, 0 sinon.' : "3 pts victoire+objectif · 2 pts victoire seule · 1 pt objectif seul · 0 sinon."}</p>
   </div>`;
   return html;
 }
@@ -3546,10 +3671,15 @@ function renderAdminSeances(c){
       <label>Thème travaillé <span class="sub">(sert de thème de secours pour le carnet — voir ci-dessous)</span></label>
       <select id="new-seance-theme"></select>
       <label style="display:flex; align-items:center; gap:8px; margin-top:10px;">
-        <input type="checkbox" id="new-seance-carnet" style="width:auto;">
+        <input type="checkbox" id="new-seance-carnet" style="width:auto;" onchange="if(this.checked) document.getElementById('new-seance-eval').checked=false;">
         📓 Activer "Mon carnet" pour cette séance (entraînement individualisé AFL2)
       </label>
       <p class="sub" style="margin-top:-4px;">Débloque un onglet où chaque élève fixe son propre axe de travail. Le thème choisi ci-dessus sert de filet de sécurité pour un élève qui n'aurait pas encore d'objectif personnel actif.</p>
+      <label style="display:flex; align-items:center; gap:8px; margin-top:10px;">
+        <input type="checkbox" id="new-seance-eval" style="width:auto;" onchange="if(this.checked) document.getElementById('new-seance-carnet').checked=false;">
+        🎓 Séance d'évaluation finale (mode vierge — échauffement + match classique uniquement)
+      </label>
+      <p class="sub" style="margin-top:-4px;">Supprime les onglets orange/bleu et tout bonus de score : juste l'échauffement puis des matchs classiques (règles UNSS, +1/-1, pas de thème), avec classement automatique de la poule. Incompatible avec "Mon carnet" (l'un désactive l'autre).</p>
       <button class="btn" onclick="createSeanceUI()">+ Créer la séance</button>
     </div>
     <div class="card" id="liste-seances">Chargement…</div>`;
@@ -3566,7 +3696,7 @@ function renderAdminSeances(c){
     seances.sort((a,b)=> Number(b.Numero)-Number(a.Numero));
     seances.forEach(s=>{
       const t = findTheme(s.ThemeID);
-      html += `<tr><td><strong>${s.Numero}</strong></td><td>${s.Date}</td><td>${s.Titre}${s.CarnetActif ? ' <span class="badge" style="background:#7048e8;">📓 carnet</span>' : ''}</td><td>${t?t.theme.nom:s.ThemeID}</td>
+      html += `<tr><td><strong>${s.Numero}</strong></td><td>${s.Date}</td><td>${s.Titre}${s.CarnetActif ? ' <span class="badge" style="background:#7048e8;">📓 carnet</span>' : ''}${s.EvaluationFinale ? ' <span class="badge" style="background:#e8590c;">🎓 évaluation</span>' : ''}</td><td>${t?t.theme.nom:s.ThemeID}</td>
         <td><span class="link" onclick="deleteSeanceUI('${s.ID}')">supprimer</span></td></tr>`;
     });
     html += '</table>';
@@ -3602,9 +3732,10 @@ function createSeanceUI(){
   const numero = document.getElementById('new-seance-numero').value;
   const titre = document.getElementById('new-seance-titre').value || ('Séance du '+date);
   const carnetActif = document.getElementById('new-seance-carnet').checked;
+  const evaluationFinale = document.getElementById('new-seance-eval').checked;
   if(!date) return alert('Choisissez une date');
   if(!numero) return alert('Indiquez un numéro de séance');
-  createSeance(date, chapitreId, themeId, titre, numero, carnetActif)
+  createSeance(date, chapitreId, themeId, titre, numero, carnetActif, evaluationFinale)
     .then(()=>{ renderAdminSeances(document.getElementById('admin-content')); }).catch(gsFail);
 }
 
@@ -4532,10 +4663,27 @@ function creerExerciceUI(){
 
 function renderAdminSuivi(c){
   c.innerHTML = `<div class="card center">
-      <button class="btn secondary" onclick="exportCSV()">⬇ Exporter en CSV</button>
+      <button class="btn secondary" onclick="exportCSV()">⬇ Exporter les résultats (AFL1) en CSV</button>
+      <button class="btn secondary" onclick="exportCarnetCSV()">⬇ Exporter le carnet (AFL2) en CSV</button>
+      <button class="btn secondary" onclick="exportRolesCSV()">⬇ Exporter les rôles (AFL3) en CSV</button>
+      <button class="btn secondary" onclick="exportTempsMortsCSV()">⬇ Exporter les temps morts (AFL3) en CSV</button>
+      <button class="btn" onclick="exportGroupeParEleveCSV()">⬇ Tout exporter, regroupé par élève (CSV)</button>
       <button class="btn secondary" onclick="nettoyerOrphelinsUI()">🧹 Nettoyer les résultats orphelins</button>
     </div>
+    <div class="card">
+      <p style="margin:0 0 8px; font-weight:700;">📋 Bilan CCF par élève <span class="sub" style="font-weight:400;">(AFL1 + AFL2 + AFL3 réunis)</span></p>
+      <label>Élève</label>
+      <select id="bilan-ccf-eleve" onchange="chargerBilanCCF(this.value)"><option value="">— Choisir un élève —</option></select>
+      <div id="bilan-ccf-zone" style="margin-top:12px;"></div>
+    </div>
     <div class="card" id="suivi-table">Chargement…</div>`;
+  getEleves().then(eleves=>{
+    const sel = document.getElementById('bilan-ccf-eleve');
+    if(sel){
+      eleves.sort((a,b)=>String(a.Nom).localeCompare(String(b.Nom)));
+      eleves.forEach(e=>{ sel.innerHTML += `<option value="${e.ID}">${e.Nom}</option>`; });
+    }
+  }).catch(()=>{});
   getProgressionAll().then(rows=>{
     rows = rows || [];
     window._suiviData = rows;
@@ -4584,6 +4732,80 @@ function renderAdminSuivi(c){
     target.innerHTML = html;
   }).catch(gsFail);
 }
+
+/* ============================================================
+   BILAN CCF PAR ÉLÈVE — vue de synthèse AFL1 + AFL2 + AFL3 pour
+   l'évaluation finale. Réutilise les fonctions déjà existantes,
+   n'ajoute aucune nouvelle donnée.
+   ============================================================ */
+function chargerBilanCCF(eleveId){
+  const zone = document.getElementById('bilan-ccf-zone');
+  if(!zone) return;
+  if(!eleveId){ zone.innerHTML = ''; return; }
+  zone.innerHTML = '<p class="sub">Chargement…</p>';
+  Promise.all([
+    getEleves(), getProgressionEleve(eleveId), getCarnetEntriesPourEleves([eleveId]),
+    getSeances(), getTempsMortsAll()
+  ]).then(([eleves, resultatRows, carnetRows, seances, tempsMortsAll])=>{
+    const eleve = eleves.find(e=>e.ID===eleveId);
+    zone.innerHTML = bilanCCFHtml(eleve, resultatRows, carnetRows, seances, tempsMortsAll);
+  }).catch(gsFail);
+}
+
+function bilanCCFHtml(eleve, resultatRows, carnetRows, seances, tempsMortsAll){
+  if(!eleve) return '<p class="sub">Élève introuvable.</p>';
+
+  // --- AFL1 ---
+  const stats = computeStats(resultatRows);
+  const winGlobal = computeWinRate(resultatRows);
+  const rowsEval = resultatRows.filter(r=>r.EvaluationFinaleSeance);
+  const winEval = computeWinRate(rowsEval);
+  const chapitreDetail = Object.keys(stats.parChapitre).map(chNom=>{
+    const d = stats.parChapitre[chNom];
+    const pct = d.withObj ? Math.round(100*d.reussis/d.withObj) : 0;
+    return `${chNom} : ${pct}% (${d.reussis}/${d.withObj})`;
+  }).join(' · ');
+
+  // --- AFL2 ---
+  const seancesCarnet = (seances||[]).filter(s=>s.CarnetActif);
+  const carnetTries = (carnetRows||[]).slice().sort((a,b)=> new Date(b.Horodatage)-new Date(a.Horodatage));
+  const regulariteCarnet = seancesCarnet.length ? Math.round(100*carnetTries.length/seancesCarnet.length) : null;
+
+  // --- AFL3 ---
+  const roles = Array.isArray(eleve.RolesAFL3) ? eleve.RolesAFL3 : [];
+  const rolesLabels = { partenaire:"🤝 Partenaire d'entraînement", coach:"🧑‍🏫 Coach", commentateur:"🎙️ Commentateur" };
+  const tempsMortsEleve = (tempsMortsAll||[]).filter(t=>t.EleveCoach===eleve.ID)
+    .sort((a,b)=> new Date(b.Horodatage)-new Date(a.Horodatage));
+
+  return `
+    <h3 style="margin:0 0 8px;">🅰️ AFL1 — Performance</h3>
+    <div class="row">
+      <div style="flex:1;">${statBar('Objectifs atteints (entraînement)', stats.pctGlobal, `${stats.reussisCount}/${stats.withObjCount}`, 'var(--vert)')}</div>
+      <div style="flex:1;">${statBar('Victoires (toutes séances)', winGlobal.pct, `${winGlobal.wins}/${winGlobal.total}`, 'var(--jaune)')}</div>
+    </div>
+    <div class="row" style="margin-top:4px;">
+      <div style="flex:1;">${statBar('🎓 Victoires en évaluation finale', winEval.pct, `${winEval.wins}/${winEval.total}`, 'var(--orange)')}</div>
+    </div>
+    ${chapitreDetail ? `<p class="sub" style="margin-top:6px;">${chapitreDetail}</p>` : '<p class="sub">Aucun résultat par chapitre pour l\'instant.</p>'}
+
+    <h3 style="margin:18px 0 8px;">🅱️ AFL2 — Carnet d'entraînement</h3>
+    <p class="sub" style="margin:0 0 8px;">Régularité : ${regulariteCarnet===null ? 'aucune séance carnet proposée pour l\'instant' : `${carnetTries.length}/${seancesCarnet.length} séances remplies (${regulariteCarnet}%)`}</p>
+    ${carnetTries.length ? carnetTries.map(ct=>`
+      <div class="sub" style="border-left:3px solid #7048e8; padding-left:8px; margin-bottom:6px;">
+        <strong>${(ct.Horodatage||'').slice(0,10)}</strong> — objectif : ${ct.ObjectifThemeNom || ct.ObjectifThemeID}
+        ${ct.Bilan ? `<br>Bilan : ${ct.Bilan.replace(/</g,'&lt;')}` : ''}
+      </div>`).join('') : '<p class="sub">Aucune entrée de carnet pour l\'instant.</p>'}
+
+    <h3 style="margin:18px 0 8px;">🅲️ AFL3 — Rôles</h3>
+    <p class="sub" style="margin:0 0 8px;">Rôles actuels : ${roles.length ? roles.map(r=>rolesLabels[r]||r).join(', ') : 'aucun rôle choisi pour l\'instant'}</p>
+    <p class="sub" style="margin:0 0 6px;">Temps morts coachés : <strong>${tempsMortsEleve.length}</strong></p>
+    ${tempsMortsEleve.length ? tempsMortsEleve.slice(0,10).map(t=>`
+      <div class="sub" style="border-left:3px solid #e8590c; padding-left:8px; margin-bottom:6px;">
+        <strong>${(t.Horodatage||'').slice(0,10)}</strong> — ${(t.Note||'').replace(/</g,'&lt;')}
+      </div>`).join('') : ''}
+  `;
+}
+
 function nettoyerOrphelinsUI(){
   if(!confirm("Rechercher et supprimer définitivement les résultats rattachés à des séances déjà supprimées ?")) return;
   deleteOrphanResultats().then(count=>{
@@ -4602,6 +4824,106 @@ function exportCSV(){
   link.href = URL.createObjectURL(blob);
   link.download = 'suivi_badminton.csv';
   link.click();
+}
+
+function telechargerCSV_(filename, headers, rows){
+  let csv = headers.join(';')+'\\n';
+  rows.forEach(r=>{ csv += headers.map(h=>String(r[h]!==undefined && r[h]!==null ? r[h] : '').replace(/;/g,',').replace(/\\n/g,' ')).join(';')+'\\n'; });
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  link.click();
+}
+
+function exportCarnetCSV(){
+  Promise.all([getCarnetEntriesAll(), getEleves()]).then(([entries, eleves])=>{
+    if(!entries.length) return alert('Aucune entrée de carnet à exporter.');
+    const eleveNom = {}; eleves.forEach(e=>eleveNom[e.ID]=e.Nom);
+    const rows = entries.map(e=>({
+      Date: (e.Horodatage||'').slice(0,10), Eleve: eleveNom[e.EleveID]||e.EleveID,
+      ObjectifThemeNom: e.ObjectifThemeNom||'', Bilan: e.Bilan||'', SeanceID: e.SeanceID||''
+    }));
+    telechargerCSV_('carnet_afl2_badminton.csv', ['Date','Eleve','ObjectifThemeNom','Bilan','SeanceID'], rows);
+  }).catch(gsFail);
+}
+
+function exportRolesCSV(){
+  getEleves().then(eleves=>{
+    const rolesLabels = { partenaire:"Partenaire d'entraînement", coach:"Coach", commentateur:"Commentateur" };
+    const rows = eleves.map(e=>({
+      Eleve: e.Nom, Roles: (Array.isArray(e.RolesAFL3)?e.RolesAFL3:[]).map(r=>rolesLabels[r]||r).join(' + ')
+    }));
+    telechargerCSV_('roles_afl3_badminton.csv', ['Eleve','Roles'], rows);
+  }).catch(gsFail);
+}
+
+function exportTempsMortsCSV(){
+  Promise.all([getTempsMortsAll(), getSeances()]).then(([tempsMorts, seances])=>{
+    if(!tempsMorts.length) return alert('Aucun temps mort à exporter.');
+    const seanceTitre = {}; seances.forEach(s=>seanceTitre[s.ID]=s.Titre+' (n°'+s.Numero+')');
+    const rows = tempsMorts.map(t=>({
+      Date: (t.Horodatage||'').slice(0,10), Coach: t.EleveCoachNom||'', Seance: seanceTitre[t.SeanceID]||t.SeanceID, Note: t.Note||''
+    }));
+    telechargerCSV_('temps_morts_afl3_badminton.csv', ['Date','Coach','Seance','Note'], rows);
+  }).catch(gsFail);
+}
+
+// Export unique regroupant AFL1 + AFL2 + AFL3, trié par élève puis par
+// type puis par date — toutes les données d'un même élève se retrouvent
+// à la suite les unes des autres dans le fichier (pratique pour la
+// correction : un Ctrl+F sur le nom suffit).
+function exportGroupeParEleveCSV(){
+  Promise.all([getProgressionAll(), getCarnetEntriesAll(), getTempsMortsAll(), getEleves(), getSeances()])
+    .then(([resultats, carnetEntries, tempsMorts, eleves, seances])=>{
+      const eleveNom = {}; eleves.forEach(e=>eleveNom[e.ID]=e.Nom);
+      const seanceTitre = {}; seances.forEach(s=>seanceTitre[s.ID]=s.Titre+' (n°'+s.Numero+')');
+      const rolesLabels = { partenaire:"Partenaire d'entraînement", coach:"Coach", commentateur:"Commentateur" };
+      const lignes = [];
+
+      resultats.forEach(r=>{
+        const t = findTheme(r.ThemeID);
+        const nomTheme = t ? t.theme.nom : (r.ThemeID==='echauffement' ? 'Échauffement' : r.ThemeID);
+        lignes.push({
+          Eleve: r.NomEleve||'', Type: r.EvaluationFinaleSeance ? 'AFL1-Évaluation' : 'AFL1-Entraînement',
+          Date: r.DateSeance||'', ThemeOuObjectif: nomTheme, Detail: `${r.Phase||''} — ${r.Detail||''}`,
+          Resultat: `Score:${r.Score||''} / Objectif:${r.ObjectifAtteint||'-'} / Victoire:${r.Victoire||'-'}`
+        });
+      });
+
+      carnetEntries.forEach(ce=>{
+        lignes.push({
+          Eleve: eleveNom[ce.EleveID]||ce.EleveID||'', Type: 'AFL2-Carnet',
+          Date: (ce.Horodatage||'').slice(0,10), ThemeOuObjectif: ce.ObjectifThemeNom||ce.ObjectifThemeID||'',
+          Detail: ce.Bilan||'', Resultat: ''
+        });
+      });
+
+      eleves.forEach(e=>{
+        const roles = Array.isArray(e.RolesAFL3) ? e.RolesAFL3 : [];
+        if(!roles.length) return;
+        lignes.push({
+          Eleve: e.Nom||'', Type: 'AFL3-Rôles', Date: '', ThemeOuObjectif: roles.map(r=>rolesLabels[r]||r).join(' + '),
+          Detail: '', Resultat: ''
+        });
+      });
+
+      tempsMorts.forEach(t=>{
+        lignes.push({
+          Eleve: t.EleveCoachNom||'', Type: 'AFL3-TempsMort', Date: (t.Horodatage||'').slice(0,10),
+          ThemeOuObjectif: seanceTitre[t.SeanceID]||t.SeanceID||'', Detail: t.Note||'', Resultat: ''
+        });
+      });
+
+      if(!lignes.length) return alert('Aucune donnée à exporter.');
+      lignes.sort((a,b)=>{
+        if(a.Eleve !== b.Eleve) return String(a.Eleve).localeCompare(String(b.Eleve));
+        if(a.Type !== b.Type) return String(a.Type).localeCompare(String(b.Type));
+        return String(a.Date).localeCompare(String(b.Date));
+      });
+      telechargerCSV_('bilan_complet_par_eleve_badminton.csv',
+        ['Eleve','Type','Date','ThemeOuObjectif','Detail','Resultat'], lignes);
+    }).catch(gsFail);
 }
 </script>
 </body>
