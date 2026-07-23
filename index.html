@@ -653,6 +653,7 @@ function appliquerSurchargeTheme(chapitre, theme){
   if(ov.VariablesMoins2!==undefined) t2.sa2.variables.moins = ov.VariablesMoins2;
   if(ov.VariablesPlus2!==undefined) t2.sa2.variables.plus = ov.VariablesPlus2;
   if(ov.ImageData2) t2.sa2.imageData = ov.ImageData2;
+  if(ov.ObjectifCroise2!==undefined) t2.sa2.objectifCroise = ov.ObjectifCroise2;
 
   // Compteur ("Match à thème") : mode et paramètres, si modifiés
   if(ov.ScoreMode2){
@@ -740,7 +741,7 @@ function themePersonaliseToThemeShape(doc){
   const chapitreBase = findChapitrePourExercice({ ChapitreID: doc.ChapitreID });
   const themeId = 'theme-perso-'+doc.ID;
   const vide = { niveaux:[], but:'—', amenagement:'—', consignes:'—', criteres:'—',
-    variables:{moins:'—', plus:'—'}, diagram:'full' };
+    variables:{moins:'—', plus:'—'}, diagram:'full', objectifCroise:'' };
 
   const sa1 = doc.But1 ? {
     niveaux:[], but: doc.But1||'', amenagement: doc.Amenagement1||'', consignes: doc.Consignes1||'',
@@ -761,7 +762,8 @@ function themePersonaliseToThemeShape(doc){
   const sa2 = doc.But2 ? Object.assign({
     niveaux:[], but: doc.But2||'', amenagement: doc.Amenagement2||'', consignes: doc.Consignes2||'',
     criteres: doc.Criteres2||'', variables:{ moins: doc.VariablesMoins2||'—', plus: doc.VariablesPlus2||'—' },
-    diagram:'full', imageData: doc.ImageData2||null, scoreMode: doc.ScoreMode2||'direct'
+    diagram:'full', imageData: doc.ImageData2||null, scoreMode: doc.ScoreMode2||'direct',
+    objectifCroise: doc.ObjectifCroise2||''
   }, scoreExtra) : vide;
 
   const chapitre = Object.assign({}, chapitreBase, {
@@ -1956,10 +1958,13 @@ function renderJaunePersonnalise(){
   const ficheJoueur = (nom, found, secours) => {
     if(!found) return `<div class="card" style="flex:1; min-width:220px;"><p class="sub">Objectif introuvable pour ${nom}.</p></div>`;
     const sa2 = found.theme.sa2;
+    const consigneCroisee = (sa2.objectifCroise || '').trim();
     return `<div class="card" style="flex:1; min-width:220px;">
       <p class="sub" style="margin:0 0 4px;">🎯 Objectif de <strong>${nom}</strong>${secours?' <span style="color:#e8590c;">(thème de secours)</span>':''}</p>
       <p style="margin:0 0 6px; font-weight:700;">${found.theme.nom}</p>
-      <p class="sub" style="margin:0;"><strong>Consigne :</strong> ${sa2.consignes}</p>
+      ${consigneCroisee
+        ? `<p class="sub" style="margin:0;"><strong>Consigne :</strong> ${consigneCroisee}</p>`
+        : `<p class="sub" style="margin:0; color:#e8590c;">Objectif pas encore défini pour ce thème en match croisé — demande à ton enseignant.</p>`}
     </div>`;
   };
 
@@ -1976,7 +1981,6 @@ function renderJaunePersonnalise(){
   return `<div class="banniere jaune">🟡 Match à thème — objectifs croisés <span class="tag">~30 min</span></div>
     <div class="card">
       <p class="sub" style="margin:0;">Match classique, terrain entier, règles standards du badminton. Chacun poursuit en plus son propre objectif personnel ci-dessous.</p>
-      <p class="sub" style="margin:8px 0 0;">⚠️ La consigne de chaque objectif peut mentionner un bouton ou un mode de score spécifique (mort subite, barème...) — ici, ça ne s'applique pas : repère juste si tu remplis ton critère pendant le jeu, et déclare-le toi-même en fin de match ci-dessous.</p>
     </div>
     <div id="classement-poule-zone">${classementDejaChargeIci ? classementPouleHtml() : '<div class="card"><p class="sub">Chargement du classement…</p></div>'}</div>
     <div class="row">${ficheJoueur(m.a.nom, foundA, secoursA)}${ficheJoueur(m.b.nom, foundB, secoursB)}</div>
@@ -3742,7 +3746,12 @@ function themeEditFormHtml(themeId, suffix, sa){
       <option value="rallyCount">Comptage cumulé (ex : nombre de frappes)</option>
       <option value="servicePoints">Classification par échange (2-3 catégories)</option>
     </select>
-    <div id="ov-scoremode-config"></div>` : ''}
+    <div id="ov-scoremode-config"></div>
+    <div style="margin-top:14px; padding-top:14px; border-top:1px dashed var(--line);">
+      <label>🎯 Consigne pour les matchs "objectifs croisés" (AFL2, séances individualisées)</label>
+      <textarea class="ov-field" id="ov-objectifcroise2" rows="2" disabled placeholder="Ex : Marquer le point en jouant un amorti qui retombe avant la ligne de service.">${esc(sa.objectifCroise)}</textarea>
+      <p class="sub" style="margin:4px 0 0;">Reformulez le critère pour un contexte de match libre où l'adversaire poursuit un autre objectif (pas de mode de score spécial, pas de fin de match anticipée). Laissé vide, l'élève verra "objectif pas encore défini".</p>
+    </div>` : ''}
   </div>`;
 }
 
@@ -3774,7 +3783,8 @@ function enregistrerSurchargeThemeUI(themeId){
     Criteres1: val('ov-criteres1'), VariablesMoins1: val('ov-varmoins1'), VariablesPlus1: val('ov-varplus1'),
     But2: val('ov-but2'), Amenagement2: val('ov-amenagement2'), Consignes2: val('ov-consignes2'),
     Criteres2: val('ov-criteres2'), VariablesMoins2: val('ov-varmoins2'), VariablesPlus2: val('ov-varplus2'),
-    RegleSpeciale: val('ov-regle'), ButReference: val('ov-butref')
+    RegleSpeciale: val('ov-regle'), ButReference: val('ov-butref'),
+    ObjectifCroise2: val('ov-objectifcroise2')
   };
   if(OVERRIDE_IMAGE_DATA['1']) data.ImageData1 = OVERRIDE_IMAGE_DATA['1'];
   if(OVERRIDE_IMAGE_DATA['2']) data.ImageData2 = OVERRIDE_IMAGE_DATA['2'];
@@ -3834,7 +3844,7 @@ function reinitialiserThemeUI(themeId){
    ============================================================ */
 function themePersoFormWrapperHtml(themeId){
   const isNew = themeId === 'theme-perso-new';
-  const vide2 = { niveaux:[], but:'', amenagement:'', consignes:'', criteres:'', variables:{moins:'',plus:''}, diagram:'full', scoreMode:'direct' };
+  const vide2 = { niveaux:[], but:'', amenagement:'', consignes:'', criteres:'', variables:{moins:'',plus:''}, diagram:'full', scoreMode:'direct', objectifCroise:'' };
   const vide1 = { niveaux:[], but:'', amenagement:'', consignes:'', criteres:'', variables:{moins:'',plus:''}, diagram:'full' };
   let sa1 = vide1, sa2 = vide2, nomActuel = '', refBut = '', refRegle = '', refImg = null;
   let chapitreIdActuel = ADMIN_BANQUE_CHAPITRE, docId = '';
@@ -3912,7 +3922,8 @@ function enregistrerThemePersonaliseUI(id){
     Criteres1: val('ov-criteres1'), VariablesMoins1: val('ov-varmoins1'), VariablesPlus1: val('ov-varplus1'),
     But2: val('ov-but2'), Amenagement2: val('ov-amenagement2'), Consignes2: val('ov-consignes2'),
     Criteres2: val('ov-criteres2'), VariablesMoins2: val('ov-varmoins2'), VariablesPlus2: val('ov-varplus2'),
-    RegleSpeciale: val('ov-regle'), ButReference: val('ov-butref')
+    RegleSpeciale: val('ov-regle'), ButReference: val('ov-butref'),
+    ObjectifCroise2: val('ov-objectifcroise2')
   };
   if(OVERRIDE_IMAGE_DATA['1']) data.ImageData1 = OVERRIDE_IMAGE_DATA['1'];
   if(OVERRIDE_IMAGE_DATA['2']) data.ImageData2 = OVERRIDE_IMAGE_DATA['2'];
