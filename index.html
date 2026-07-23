@@ -882,8 +882,8 @@ async function getEleves(){
 
 async function createEleve(nom, classe){
   const code = generateCode_();
-  await db.collection('eleves').add({ Nom:nom, Classe:classe, Code:code, DateCreation:new Date().toISOString() });
-  return { nom, classe, code };
+  const ref = await db.collection('eleves').add({ Nom:nom, Classe:classe, Code:code, DateCreation:new Date().toISOString() });
+  return { nom, classe, code, id: ref.id };
 }
 
 async function deleteEleve(id){
@@ -905,11 +905,11 @@ async function getSeances(){
 }
 
 async function createSeance(date, chapitreId, themeId, titre, numero, carnetActif, evaluationFinale){
-  await db.collection('seances').add({
+  const ref = await db.collection('seances').add({
     Date: date, ChapitreID: chapitreId, ThemeID: String(themeId), Titre: titre, Numero: Number(numero),
     CarnetActif: !!carnetActif, EvaluationFinale: !!evaluationFinale
   });
-  return true;
+  return { id: ref.id };
 }
 
 async function deleteSeance(id){
@@ -4676,6 +4676,13 @@ function renderAdminSuivi(c){
       <select id="bilan-ccf-eleve" onchange="chargerBilanCCF(this.value)"><option value="">— Choisir un élève —</option></select>
       <div id="bilan-ccf-zone" style="margin-top:12px;"></div>
     </div>
+    <div class="card" style="border-color:#e8590c;">
+      <p style="margin:0 0 8px; font-weight:700;">🧪 Outils de test (données fictives)</p>
+      <p class="sub" style="margin:0 0 10px;">Génère 30 élèves préfixés "TEST-" + 15 séances (L1-L5 classiques, L6-L13 carnet actif, L14-L15 évaluation finale) avec résultats, carnets, rôles et temps morts fictifs mais variés — pour valider l'admin (Bilan CCF, exports, classements) à l'échelle, sans toucher à tes vraies données. Nécessite qu'au moins un chapitre/thème existe déjà.</p>
+      <button class="btn secondary" id="btn-generer-test" onclick="genererDonneesTestUI()">🧪 Générer un jeu de données de test</button>
+      <button class="btn secondary" id="btn-supprimer-test" onclick="supprimerDonneesTestUI()">🗑️ Supprimer toutes les données TEST-</button>
+      <div id="test-tools-msg" class="sub" style="margin-top:8px;"></div>
+    </div>
     <div class="card" id="suivi-table">Chargement…</div>`;
   getEleves().then(eleves=>{
     const sel = document.getElementById('bilan-ccf-eleve');
@@ -4817,9 +4824,9 @@ function exportCSV(){
   const rows = window._suiviData || [];
   if(!rows.length) return alert('Aucune donnée à exporter.');
   const headers = ['DateSeance','NomEleve','ThemeID','Phase','Detail','Score','ObjectifAtteint','Victoire'];
-  let csv = headers.join(';')+'\\n';
-  rows.forEach(r=>{ csv += headers.map(h=>String(r[h]||'').replace(/;/g,',')).join(';')+'\\n'; });
-  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  let csv = headers.join(';')+'\n';
+  rows.forEach(r=>{ csv += headers.map(h=>String(r[h]||'').replace(/;/g,',').replace(/\r?\n/g,' ')).join(';')+'\n'; });
+  const blob = new Blob(['\ufeff'+csv], {type:'text/csv;charset=utf-8;'});
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
   link.download = 'suivi_badminton.csv';
@@ -4827,9 +4834,9 @@ function exportCSV(){
 }
 
 function telechargerCSV_(filename, headers, rows){
-  let csv = headers.join(';')+'\\n';
-  rows.forEach(r=>{ csv += headers.map(h=>String(r[h]!==undefined && r[h]!==null ? r[h] : '').replace(/;/g,',').replace(/\\n/g,' ')).join(';')+'\\n'; });
-  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  let csv = headers.join(';')+'\n';
+  rows.forEach(r=>{ csv += headers.map(h=>String(r[h]!==undefined && r[h]!==null ? r[h] : '').replace(/;/g,',').replace(/\r?\n/g,' ')).join(';')+'\n'; });
+  const blob = new Blob(['\ufeff'+csv], {type:'text/csv;charset=utf-8;'});
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
   link.download = filename;
@@ -4924,6 +4931,244 @@ function exportGroupeParEleveCSV(){
       telechargerCSV_('bilan_complet_par_eleve_badminton.csv',
         ['Eleve','Type','Date','ThemeOuObjectif','Detail','Resultat'], lignes);
     }).catch(gsFail);
+}
+
+/* ============================================================
+   OUTILS DE TEST — génère/supprime un jeu de données fictif (30
+   élèves "TEST-", 15 séances L1-L15) pour valider l'admin à
+   l'échelle avant la vraie rentrée. N'affecte jamais les vraies
+   données : tout est identifiable par le préfixe "TEST-" sur le
+   nom des élèves et le titre des séances.
+   ============================================================ */
+const TEST_PRENOMS = ["Léa","Nathan","Ondine","Georges","Téo","Chloé","Hugo","Manon","Lucas","Emma",
+  "Louis","Camille","Enzo","Jade","Rayan","Inès","Nolan","Zoé","Mathis","Anna",
+  "Yanis","Lina","Sacha","Maëlys","Adam","Louna","Ethan","Rose","Tom","Alice"];
+const TEST_NOMS = ["Martin","Bernard","Dubois","Thomas","Robert","Petit","Durand","Leroy","Moreau","Simon",
+  "Laurent","Lefebvre","Michel","Garcia","David","Roux"];
+const TEST_BILANS = [
+  "Bonne séance, je progresse sur cet objectif.",
+  "Un peu difficile aujourd'hui, je continue quand même la prochaine fois.",
+  "Je change d'objectif, je pense avoir assez progressé sur celui-ci.",
+  "Encore du travail nécessaire sur ce point.",
+  "Séance efficace, bonne entente avec mon partenaire."
+];
+const TEST_CONSEILS = [
+  "Lève plus la raquette avant le service.",
+  "Reste plus au centre entre deux échanges.",
+  "Prends le volant plus tôt, avant qu'il descende.",
+  "Varie plus tes trajectoires pour surprendre l'adversaire.",
+  "Pense à te replacer après chaque frappe."
+];
+
+function randInt(min,max){ return Math.floor(min + Math.random()*(max-min+1)); }
+function randChoice(arr){ return arr[randInt(0, arr.length-1)]; }
+
+async function executerEcrituresParLots_(items){
+  const CHUNK = 450;
+  for(let i=0;i<items.length;i+=CHUNK){
+    const batch = db.batch();
+    items.slice(i, i+CHUNK).forEach(it=>{ batch.set(db.collection(it.col).doc(), it.data); });
+    await batch.commit();
+  }
+}
+async function executerMisesAJourParLots_(items){
+  const CHUNK = 450;
+  for(let i=0;i<items.length;i+=CHUNK){
+    const batch = db.batch();
+    items.slice(i, i+CHUNK).forEach(it=>{ batch.update(db.collection(it.col).doc(it.id), it.data); });
+    await batch.commit();
+  }
+}
+async function executerSuppressionsParLots_(items){
+  const CHUNK = 450;
+  for(let i=0;i<items.length;i+=CHUNK){
+    const batch = db.batch();
+    items.slice(i, i+CHUNK).forEach(it=>{ batch.delete(db.collection(it.col).doc(it.id)); });
+    await batch.commit();
+  }
+}
+async function fetchToutBrut_(collection){
+  const snap = await db.collection(collection).get();
+  return snap.docs.map(d=>({ ID:d.id, ...d.data() }));
+}
+
+async function genererDonneesTest(onProgress){
+  onProgress && onProgress('Préparation des thèmes disponibles…');
+  await Promise.all([rafraichirChapitresCustom(), rafraichirExercicesCustom(), rafraichirThemesPersonnalises(),
+    rafraichirThemeOverrides(), rafraichirChapitreOverrides()]);
+  const themesDispo = [];
+  getChapitresAffiches().forEach(ch=>{
+    getThemesAffiches(ch.id).forEach(t=>{ themesDispo.push({ chapitreId: ch.id, themeId: t.id, themeNom: t.nom }); });
+  });
+  THEMES_PERSONNALISES_CACHE.forEach(tp=>{
+    themesDispo.push({ chapitreId: tp.ChapitreID, themeId: 'theme-perso-'+tp.ID, themeNom: tp.Nom });
+  });
+  if(!themesDispo.length) throw new Error("Aucun thème disponible — créez au moins un chapitre/thème avant de générer des données de test.");
+
+  onProgress && onProgress('Création de 30 élèves TEST-…');
+  const eleves = [];
+  for(let i=0;i<30;i++){
+    const prenom = TEST_PRENOMS[i % TEST_PRENOMS.length];
+    const nom = TEST_NOMS[(i*3+1) % TEST_NOMS.length];
+    const e = await createEleve(`TEST- ${prenom} ${nom} ${i+1}`, '2NDE-TEST');
+    eleves.push({ id: e.id, nom: e.nom, skill: 0.3+Math.random()*0.6, regularite: 0.4+Math.random()*0.6,
+      roles: [], objectifActif: null });
+  }
+
+  onProgress && onProgress('Création des 15 séances…');
+  const seancesExistantes = await getSeances();
+  let prochainNumero = seancesExistantes.length ? Math.max(...seancesExistantes.map(s=>Number(s.Numero)||0)) + 1 : 1;
+  const jourMs = 24*60*60*1000;
+  const seances = [];
+  for(let n=1; n<=15; n++){
+    const carnetActif = n>=6 && n<=13;
+    const evaluationFinale = n>=14;
+    const date = new Date(Date.now() - (15-n)*7*jourMs).toISOString().slice(0,10);
+    const themeChoisi = themesDispo[(n-1) % themesDispo.length];
+    const titre = `TEST- Leçon ${n}${evaluationFinale?' (évaluation finale)':(carnetActif?' (autonomie)':'')}`;
+    const s = await createSeance(date, themeChoisi.chapitreId, themeChoisi.themeId, titre, prochainNumero++, carnetActif, evaluationFinale);
+    seances.push({ id: s.id, date, carnetActif, evaluationFinale, themeSecours: themeChoisi, numero: n });
+  }
+
+  onProgress && onProgress('Attribution des rôles AFL3…');
+  const rolesPossibles = ['partenaire','coach','commentateur'];
+  const misesAJourRoles = [];
+  eleves.forEach(e=>{
+    if(Math.random() < 0.7){
+      const nb = randInt(1,2), roles = [];
+      while(roles.length < nb){ const r = randChoice(rolesPossibles); if(!roles.includes(r)) roles.push(r); }
+      e.roles = roles;
+      misesAJourRoles.push({ col:'eleves', id: e.id, data: { RolesAFL3: roles } });
+    }
+  });
+
+  onProgress && onProgress('Génération des résultats, carnets et temps morts…');
+  const ecritures = [];
+  function poulesDeLaSeance(){
+    const shuffled = eleves.slice().sort(()=>Math.random()-0.5);
+    const groupes = [];
+    for(let i=0;i<shuffled.length;i+=3) groupes.push(shuffled.slice(i, i+3));
+    return groupes;
+  }
+
+  seances.forEach(seance=>{
+    const groupes = poulesDeLaSeance();
+    groupes.forEach((groupe, gi)=>{
+      const pouleLabel = `TEST-POULE-${seance.numero}-${gi}`;
+      const horodatageBase = seance.date+'T18:00:00.000Z';
+
+      if(seance.evaluationFinale){
+        for(let i=0;i<groupe.length;i++){
+          for(let j=i+1;j<groupe.length;j++){
+            const a = groupe[i], b = groupe[j];
+            const aGagne = Math.random() < (a.skill/(a.skill+b.skill));
+            ecritures.push({ col:'resultats', data: { SeanceID: seance.id, EleveID: a.id, PouleLabel: pouleLabel,
+              ThemeID: seance.themeSecours.themeId, Phase:'jaune', Niveau:'', Detail:'Match évaluation finale (test)',
+              Score: aGagne?'21-15':'15-21', ObjectifAtteint:'', Victoire: aGagne?'oui':'non', Horodatage: horodatageBase } });
+            ecritures.push({ col:'resultats', data: { SeanceID: seance.id, EleveID: b.id, PouleLabel: pouleLabel,
+              ThemeID: seance.themeSecours.themeId, Phase:'jaune', Niveau:'', Detail:'Match évaluation finale (test)',
+              Score: aGagne?'15-21':'21-15', ObjectifAtteint:'', Victoire: aGagne?'non':'oui', Horodatage: horodatageBase } });
+          }
+        }
+        return;
+      }
+
+      groupe.forEach(eleve=>{
+        if(seance.carnetActif && Math.random() < eleve.regularite){
+          const choix = randChoice(themesDispo);
+          ecritures.push({ col:'carnetEntries', data: { SeanceID: seance.id, EleveID: eleve.id, PouleLabel: pouleLabel,
+            ObjectifThemeID: choix.themeId, ObjectifThemeNom: choix.themeNom, Bilan: randChoice(TEST_BILANS),
+            Horodatage: horodatageBase } });
+          eleve.objectifActif = choix;
+        }
+
+        const themeOrange = (seance.carnetActif && eleve.objectifActif) ? eleve.objectifActif : seance.themeSecours;
+        const reussiOrange = Math.random() < eleve.skill;
+        ecritures.push({ col:'resultats', data: { SeanceID: seance.id, EleveID: eleve.id, PouleLabel: pouleLabel,
+          ThemeID: themeOrange.themeId, Phase:'orange', Niveau:'', Detail:'Essai décontextualisé (test)',
+          Score:'', ObjectifAtteint: reussiOrange?'oui':'non', Victoire:'', Horodatage: horodatageBase } });
+
+        if(seance.carnetActif && eleve.roles.includes('coach') && Math.random() < 0.3){
+          ecritures.push({ col:'tempsMorts', data: { SeanceID: seance.id, PouleLabel: pouleLabel,
+            EleveCoach: eleve.id, EleveCoachNom: eleve.nom, Note: randChoice(TEST_CONSEILS),
+            Horodatage: seance.date+'T18:10:00.000Z' } });
+        }
+      });
+
+      for(let i=0;i<groupe.length;i++){
+        for(let j=i+1;j<groupe.length;j++){
+          const a = groupe[i], b = groupe[j];
+          const themeA = (seance.carnetActif && a.objectifActif) ? a.objectifActif : seance.themeSecours;
+          const themeB = (seance.carnetActif && b.objectifActif) ? b.objectifActif : seance.themeSecours;
+          const aGagne = Math.random() < (a.skill/(a.skill+b.skill));
+          const aReussi = Math.random() < a.skill, bReussi = Math.random() < b.skill;
+          ecritures.push({ col:'resultats', data: { SeanceID: seance.id, EleveID: a.id, PouleLabel: pouleLabel,
+            ThemeID: themeA.themeId, Phase:'jaune', Niveau:'', Detail:'Match (test)',
+            Score: aGagne?'21-15':'15-21', ObjectifAtteint: aReussi?'oui':'non', Victoire: aGagne?'oui':'non', Horodatage: horodatageBase } });
+          ecritures.push({ col:'resultats', data: { SeanceID: seance.id, EleveID: b.id, PouleLabel: pouleLabel,
+            ThemeID: themeB.themeId, Phase:'jaune', Niveau:'', Detail:'Match (test)',
+            Score: aGagne?'15-21':'21-15', ObjectifAtteint: bReussi?'oui':'non', Victoire: aGagne?'non':'oui', Horodatage: horodatageBase } });
+        }
+      }
+    });
+  });
+
+  onProgress && onProgress(`Écriture de ${ecritures.length} documents…`);
+  await executerEcrituresParLots_(ecritures);
+  onProgress && onProgress('Mise à jour des rôles AFL3…');
+  await executerMisesAJourParLots_(misesAJourRoles);
+
+  return { eleves: eleves.length, seances: seances.length, documents: ecritures.length };
+}
+
+function genererDonneesTestUI(){
+  if(!confirm("Générer 30 élèves TEST- + 15 séances + résultats/carnet/rôles/temps morts fictifs ? Ça peut prendre 30-60 secondes.")) return;
+  const btn = document.getElementById('btn-generer-test');
+  const msg = document.getElementById('test-tools-msg');
+  if(btn) btn.disabled = true;
+  genererDonneesTest(txt=>{ if(msg) msg.textContent = '⏳ '+txt; })
+    .then(res=>{
+      if(msg) msg.textContent = `✅ Créé : ${res.eleves} élèves, ${res.seances} séances, ${res.documents} résultats/carnets/temps morts.`;
+      if(btn) btn.disabled = false;
+      renderAdminSuivi(document.getElementById('admin-content'));
+    })
+    .catch(e=>{ if(btn) btn.disabled = false; if(msg) msg.textContent = ''; gsFail(e); });
+}
+
+async function supprimerDonneesTest(){
+  const [eleves, seances] = await Promise.all([getEleves(), getSeances()]);
+  const testEleves = eleves.filter(e=>String(e.Nom||'').startsWith('TEST-'));
+  const testSeances = seances.filter(s=>String(s.Titre||'').startsWith('TEST-'));
+  const testEleveIds = new Set(testEleves.map(e=>e.ID));
+  const testSeanceIds = new Set(testSeances.map(s=>s.ID));
+
+  const [resultatsRaw, carnetRaw, tempsMortsRaw] = await Promise.all([
+    fetchToutBrut_('resultats'), fetchToutBrut_('carnetEntries'), fetchToutBrut_('tempsMorts')
+  ]);
+
+  const aSupprimer = [];
+  resultatsRaw.forEach(r=>{ if(testEleveIds.has(r.EleveID) || testSeanceIds.has(r.SeanceID)) aSupprimer.push({col:'resultats', id:r.ID}); });
+  carnetRaw.forEach(r=>{ if(testEleveIds.has(r.EleveID) || testSeanceIds.has(r.SeanceID)) aSupprimer.push({col:'carnetEntries', id:r.ID}); });
+  tempsMortsRaw.forEach(r=>{ if(testEleveIds.has(r.EleveCoach) || testSeanceIds.has(r.SeanceID)) aSupprimer.push({col:'tempsMorts', id:r.ID}); });
+  testEleves.forEach(e=> aSupprimer.push({col:'eleves', id:e.ID}));
+  testSeances.forEach(s=> aSupprimer.push({col:'seances', id:s.ID}));
+
+  await executerSuppressionsParLots_(aSupprimer);
+  return { eleves: testEleves.length, seances: testSeances.length, total: aSupprimer.length };
+}
+
+function supprimerDonneesTestUI(){
+  if(!confirm("Supprimer définitivement toutes les données préfixées TEST- (élèves, séances, résultats, carnets, temps morts) ? Aucun impact sur les vraies données.")) return;
+  const btn = document.getElementById('btn-supprimer-test');
+  const msg = document.getElementById('test-tools-msg');
+  if(btn) btn.disabled = true;
+  supprimerDonneesTest()
+    .then(res=>{
+      if(msg) msg.textContent = `✅ Supprimé : ${res.eleves} élèves TEST-, ${res.seances} séances TEST-, ${res.total} documents au total.`;
+      if(btn) btn.disabled = false;
+      renderAdminSuivi(document.getElementById('admin-content'));
+    })
+    .catch(e=>{ if(btn) btn.disabled = false; if(msg) msg.textContent = ''; gsFail(e); });
 }
 </script>
 </body>
