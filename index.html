@@ -2097,14 +2097,31 @@ function renderJaune(chapitre, theme){
 
 /* ============================================================
    ÉVALUATION FINALE (mode "vierge", L14-L15) — échauffement +
-   match classique uniquement, règles UNSS, pas de bonus ni de
-   thème, classement automatique de la poule.
+   match classique uniquement, règles UNSS : matchs en sets de 15
+   points, 2 points d'écart nécessaires, cap à 20. Le set puis le
+   match passent automatiquement à la suite dès qu'ils sont décidés
+   (un joueur qui remporte 2 sets gagne le match).
    ============================================================ */
 const JAUNE_EVAL_KEY = 'jaune_evaluation-finale';
+const EVAL_POINTS_SET = 15;
+const EVAL_CAP_SET = 20;
+const EVAL_SETS_POUR_GAGNER = 2;
 
 function ensureJauneEvalState(){
-  if(!scoresLive[JAUNE_EVAL_KEY]) scoresLive[JAUNE_EVAL_KEY] = { a:0, b:0, matchIndex:0, locked:false };
+  if(!scoresLive[JAUNE_EVAL_KEY]) scoresLive[JAUNE_EVAL_KEY] = {
+    matchIndex: 0, setEnCours: 1, scoreA: 0, scoreB: 0, setsA: 0, setsB: 0, historique: [], locked: false
+  };
   return scoresLive[JAUNE_EVAL_KEY];
+}
+
+// Retourne 'a', 'b' ou null selon si le set est décidé (15 pts avec 2
+// d'écart, ou cap à 20 quel que soit l'écart).
+function setGagnePar_(scoreA, scoreB){
+  if(scoreA>=EVAL_POINTS_SET && scoreA-scoreB>=2) return 'a';
+  if(scoreB>=EVAL_POINTS_SET && scoreB-scoreA>=2) return 'b';
+  if(scoreA>=EVAL_CAP_SET) return 'a';
+  if(scoreB>=EVAL_CAP_SET) return 'b';
+  return null;
 }
 
 function renderJauneEvaluation(){
@@ -2124,16 +2141,20 @@ function renderJauneEvaluation(){
   });
   const classementDejaChargeIci = CLASSEMENT_POULE_CACHE && CLASSEMENT_POULE_CACHE.seanceId===CURRENT_SEANCE.ID && CLASSEMENT_POULE_CACHE.pouleId===CURRENT_POULE.id;
 
-  return `<div class="banniere jaune">🎓 Évaluation finale — match classique <span class="tag">règles UNSS</span></div>
+  const historiqueHtml = s.historique.length
+    ? `<p class="sub" style="margin:6px 0 0;">${s.historique.map(h=>`Set ${h.set} : ${h.scoreA}-${h.scoreB}`).join(' · ')}</p>` : '';
+
+  return `<div class="banniere jaune">🎓 Évaluation finale — règles UNSS <span class="tag">sets en 15, 2 pts d'écart, cap à 20</span></div>
     <div class="card">
-      <p class="sub" style="margin:0;">Match classique, terrain entier, un point par échange gagné. Pas de bonus, pas de thème — seul le résultat compte pour le classement.</p>
+      <p class="sub" style="margin:0;">Set en cours : <strong>${s.setEnCours}</strong> — Sets gagnés : ${m.a.nom} <strong>${s.setsA}</strong> / ${m.b.nom} <strong>${s.setsB}</strong> (2 sets gagnent le match)</p>
+      ${historiqueHtml}
     </div>
     <div id="classement-poule-zone">${classementDejaChargeIci ? classementPouleHtml(true) : '<div class="card"><p class="sub">Chargement du classement…</p></div>'}</div>
     <div class="card">${header}
       <div class="score-panel">
         <div class="score-card">
           <div class="nom">${m.a.nom}</div>
-          <div class="val" id="score-a-jaune-eval">${s.a}</div>
+          <div class="val" id="score-a-jaune-eval">${s.scoreA}</div>
           <div class="score-buttons">
             <button class="btn small secondary" ${s.locked?'disabled':''} onclick="incrJauneEval('a',1)">+1</button>
             <button class="btn small secondary" ${s.locked?'disabled':''} onclick="incrJauneEval('a',-1)">-1</button>
@@ -2141,53 +2162,60 @@ function renderJauneEvaluation(){
         </div>
         <div class="score-card">
           <div class="nom">${m.b.nom}</div>
-          <div class="val" id="score-b-jaune-eval">${s.b}</div>
+          <div class="val" id="score-b-jaune-eval">${s.scoreB}</div>
           <div class="score-buttons">
             <button class="btn small secondary" ${s.locked?'disabled':''} onclick="incrJauneEval('b',1)">+1</button>
             <button class="btn small secondary" ${s.locked?'disabled':''} onclick="incrJauneEval('b',-1)">-1</button>
           </div>
         </div>
       </div>
-      <div style="margin-top:14px; text-align:center;">
-        <button class="btn" id="btn-enregistrer-jaune-eval" ${s.locked?'disabled':''} onclick="enregistrerJauneEval()">
-          ${s.locked ? '⏳ Enregistrement…' : '✓ Enregistrer ce résultat'}
-        </button>
-      </div>
+      <p class="sub" style="text-align:center; margin-top:12px;">${s.locked ? '⏳ Match terminé, enregistrement en cours…' : "Le set se termine automatiquement à 15 points (2 d'écart, cap à 20). Dès qu'un joueur remporte 2 sets, le match est enregistré et le suivant démarre tout seul."}</p>
     </div>`;
 }
 
 function incrJauneEval(joueur, delta){
   const s = ensureJauneEvalState();
   if(s.locked) return;
-  s[joueur] = Math.max(0, s[joueur] + delta);
-  const el = document.getElementById('score-'+joueur+'-jaune-eval');
-  if(el) el.textContent = s[joueur];
+  if(joueur==='a') s.scoreA = Math.max(0, s.scoreA + delta);
+  else s.scoreB = Math.max(0, s.scoreB + delta);
+
+  const gagnant = setGagnePar_(s.scoreA, s.scoreB);
+  if(gagnant){
+    s.historique.push({ set: s.setEnCours, scoreA: s.scoreA, scoreB: s.scoreB });
+    if(gagnant==='a') s.setsA++; else s.setsB++;
+    s.scoreA = 0; s.scoreB = 0; s.setEnCours++;
+
+    if(s.setsA>=EVAL_SETS_POUR_GAGNER || s.setsB>=EVAL_SETS_POUR_GAGNER){
+      finaliserMatchEvaluation_();
+      return;
+    }
+  }
+  renderLeconEleve();
 }
 
-function enregistrerJauneEval(){
+function finaliserMatchEvaluation_(){
   const s = ensureJauneEvalState();
   if(s.locked) return;
   const { m } = currentMatchup('evaluation-finale', s.matchIndex);
-
   s.locked = true;
-  const btn = document.getElementById('btn-enregistrer-jaune-eval');
-  if(btn){ btn.disabled = true; btn.innerText = '⏳ Enregistrement…'; }
+  renderLeconEleve();
 
-  const victoireA = s.a > s.b ? 'oui' : 'non';
-  const victoireB = s.b > s.a ? 'oui' : 'non';
-  const detailCommun = `${m.a.nom}: ${s.a} / ${m.b.nom}: ${s.b} (évaluation finale)`;
+  const victoireA = s.setsA > s.setsB ? 'oui' : 'non';
+  const victoireB = s.setsB > s.setsA ? 'oui' : 'non';
+  const detailSets = s.historique.map(h=>`Set ${h.set}: ${h.scoreA}-${h.scoreB}`).join(' / ');
+  const detailCommun = `${m.a.nom} vs ${m.b.nom} — ${detailSets} (évaluation finale)`;
 
   const p1 = { seanceId: CURRENT_SEANCE.ID, eleveId: m.a.id, pouleLabel: CURRENT_POULE.id,
     themeId: CURRENT_THEME_ID, phase: 'jaune', niveau: '',
-    detail: detailCommun, score: `${s.a}-${s.b}`, objectifAtteint: '', victoire: victoireA };
+    detail: detailCommun, score: `${s.setsA}-${s.setsB} sets`, objectifAtteint: '', victoire: victoireA };
   const p2 = { seanceId: CURRENT_SEANCE.ID, eleveId: m.b.id, pouleLabel: CURRENT_POULE.id,
     themeId: CURRENT_THEME_ID, phase: 'jaune', niveau: '',
-    detail: detailCommun, score: `${s.b}-${s.a}`, objectifAtteint: '', victoire: victoireB };
+    detail: detailCommun, score: `${s.setsB}-${s.setsA} sets`, objectifAtteint: '', victoire: victoireB };
 
   Promise.all([saveResultat(p1), saveResultat(p2)]).then(()=>{
-    s.a = 0; s.b = 0; s.matchIndex += 1; s.locked = false;
+    scoresLive[JAUNE_EVAL_KEY] = { matchIndex: s.matchIndex+1, setEnCours:1, scoreA:0, scoreB:0, setsA:0, setsB:0, historique:[], locked:false };
     CLASSEMENT_POULE_CACHE = null;
-    showToast('✅ Résultat enregistré — nouveau match !');
+    showToast('✅ Match terminé et enregistré — match suivant !');
     renderLeconEleve();
   }).catch(e=>{ s.locked=false; gsFail(e); renderLeconEleve(); });
 }
