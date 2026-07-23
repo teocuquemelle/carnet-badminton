@@ -1318,14 +1318,12 @@ function reprendreSession(){
    ESPACE ÉLÈVE — accueil à 3 onglets (Leçon du jour / Banque / Stats)
    ============================================================ */
 function eleveHubTabsHtml(actif){
-  const carnetTab = (CURRENT_SEANCE && CURRENT_SEANCE.CarnetActif)
-    ? `<div class="tab ${actif==='carnet'?'active':''}" onclick="ouvrirOngletCarnet()">📓 Mon carnet</div>` : '';
   return `<div class="tabs" style="margin-bottom:16px;">
     <div class="tab ${actif==='lecon'?'active':''}" onclick="ouvrirOngletLecon()">Leçon du jour</div>
     <div class="tab ${actif==='banque'?'active':''}" onclick="ouvrirOngletBanque()">Banque d'exercices</div>
     <div class="tab ${actif==='techniques'?'active':''}" onclick="ouvrirOngletTechniques()">Techniques</div>
     <div class="tab ${actif==='stats'?'active':''}" onclick="renderEleveStats()">Statistiques</div>
-    ${carnetTab}
+    <div class="tab ${actif==='carnet'?'active':''}" onclick="ouvrirOngletCarnet()">📓 Mon carnet</div>
   </div>`;
 }
 
@@ -1412,20 +1410,18 @@ let CARNET_ELEVE_SELECTIONNE = null;
 let CARNET_VALIDE_POUR = {};
 
 function ouvrirOngletCarnet(){
-  if(!CURRENT_SEANCE || !CURRENT_SEANCE.CarnetActif){ ouvrirOngletLecon(); return; }
-  if(!CURRENT_POULE){
-    document.getElementById('eleve-hub-tabs').innerHTML = eleveHubTabsHtml('carnet');
-    showScreen('screen-eleve-login');
-    return;
-  }
-  if(!CARNET_ELEVE_SELECTIONNE || !CURRENT_POULE.membres.some(m=>m.id===CARNET_ELEVE_SELECTIONNE)){
-    CARNET_ELEVE_SELECTIONNE = CURRENT_POULE.membres[0].id;
+  if(CURRENT_POULE && CURRENT_SEANCE && CURRENT_SEANCE.CarnetActif){
+    if(!CARNET_ELEVE_SELECTIONNE || !CURRENT_POULE.membres.some(m=>m.id===CARNET_ELEVE_SELECTIONNE)){
+      CARNET_ELEVE_SELECTIONNE = CURRENT_POULE.membres[0].id;
+    }
   }
   renderCarnet();
   showScreen('screen-carnet');
-  chargerObjectifsActifs().then(()=>{
-    if(!document.getElementById('screen-carnet').classList.contains('hidden')) renderCarnet();
-  });
+  if(CURRENT_POULE){
+    chargerObjectifsActifs().then(()=>{
+      if(!document.getElementById('screen-carnet').classList.contains('hidden')) renderCarnet();
+    });
+  }
 }
 
 function changerCarnetEleve(){
@@ -1436,7 +1432,20 @@ function changerCarnetEleve(){
 function renderCarnet(){
   const el = document.getElementById('screen-carnet');
   if(!CURRENT_POULE){
-    el.innerHTML = eleveHubTabsHtml('carnet') + '<div class="card"><p class="sub">Déclarez d\'abord votre poule dans l\'onglet "Leçon du jour".</p></div>';
+    el.innerHTML = `${eleveHubTabsHtml('carnet')}
+      <h1>📓 Mon carnet d'entraînement</h1>
+      <div class="card">
+        <p class="sub">Connecte-toi d'abord à ta séance (numéro + codes) dans l'onglet "Leçon du jour" — le carnet s'affichera ensuite ici si ton enseignant l'a activé pour cette séance.</p>
+        <button class="btn" onclick="ouvrirOngletLecon()">Aller à "Leçon du jour"</button>
+      </div>`;
+    return;
+  }
+  if(!CURRENT_SEANCE.CarnetActif){
+    el.innerHTML = `${eleveHubTabsHtml('carnet')}
+      <h1>📓 Mon carnet d'entraînement</h1>
+      <div class="card">
+        <p class="sub">Le carnet n'est pas activé pour la séance en cours (${CURRENT_SEANCE.Titre || 'séance n°'+CURRENT_SEANCE.Numero}). Ton enseignant l'active certaines séances seulement, pour l'entraînement individualisé.</p>
+      </div>`;
     return;
   }
   const eleveId = CARNET_ELEVE_SELECTIONNE;
@@ -1711,6 +1720,7 @@ function renderLeconEleve(){
   let html = `
     <div class="topbar">
       <p class="link" onclick="logoutEleve()">&larr; déconnexion</p>
+      ${CURRENT_SEANCE.CarnetActif ? `<p class="link" onclick="ouvrirOngletCarnet()">📓 Mon carnet</p>` : ''}
       <p class="link" onclick="renderMaProgression()">Ma progression &rarr;</p>
     </div>
     <h1>${theme.nom}</h1>
