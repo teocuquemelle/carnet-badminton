@@ -177,6 +177,9 @@
   <div id="screen-techniques" class="hidden"></div>
   <div id="screen-technique-detail" class="hidden"></div>
 
+  <!-- ===================== MON CARNET (ÉLÈVE — AFL2) ===================== -->
+  <div id="screen-carnet" class="hidden"></div>
+
   <!-- ===================== STATISTIQUES (ÉLÈVE) ===================== -->
   <div id="screen-eleve-stats" class="hidden"></div>
 
@@ -854,7 +857,7 @@ function courtDiagram(kind){
    ============================================================ */
 
 // ⚠️ Changez ce mot de passe avant de déployer l'application
-const ADMIN_PASSWORD = "Boulette1904!";
+const ADMIN_PASSWORD = "badminton2026";
 
 function generateCode_(){
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // sans caractères ambigus
@@ -888,9 +891,10 @@ async function getSeances(){
   return snap.docs.map(d=>({ ID:d.id, ...d.data() }));
 }
 
-async function createSeance(date, chapitreId, themeId, titre, numero){
+async function createSeance(date, chapitreId, themeId, titre, numero, carnetActif){
   await db.collection('seances').add({
-    Date: date, ChapitreID: chapitreId, ThemeID: String(themeId), Titre: titre, Numero: Number(numero)
+    Date: date, ChapitreID: chapitreId, ThemeID: String(themeId), Titre: titre, Numero: Number(numero),
+    CarnetActif: !!carnetActif
   });
   return true;
 }
@@ -1054,6 +1058,24 @@ async function deleteThemePersonnalise(id){
   return true;
 }
 
+// ------------------------------------------------------------
+// CARNET D'ENTRAÎNEMENT (AFL2) — une entrée par élève et par séance
+// où l'enseignant a activé "Mon carnet". Contient le bilan de
+// l'objectif précédent (facultatif) et le nouvel objectif choisi
+// (ObjectifThemeID) qui sera utilisé comme "objectif actif" de
+// l'élève tant qu'il n'en fixe pas un nouveau.
+// ------------------------------------------------------------
+async function getCarnetEntriesPourEleves(eleveIds){
+  if(!eleveIds || !eleveIds.length) return [];
+  const snap = await db.collection('carnetEntries').where('EleveID','in', eleveIds.slice(0,10)).get();
+  return snap.docs.map(d=>({ ID:d.id, ...d.data() }));
+}
+
+async function saveCarnetEntry(data){
+  await db.collection('carnetEntries').add(data);
+  return true;
+}
+
 async function saveResultat(resultat){
   await db.collection('resultats').add({
     SeanceID: resultat.seanceId, EleveID: resultat.eleveId, PouleLabel: resultat.pouleLabel || '',
@@ -1173,6 +1195,44 @@ function showToast(msg){
    ============================================================ */
 let CURRENT_ELEVE = null, CURRENT_SEANCE = null, CURRENT_POULE = null, CURRENT_CHAPITRE = null, CURRENT_THEME_ID = null;
 
+/* ============================================================
+   AFL2 — "Mon carnet" : objectif personnel actif par élève
+   ============================================================
+   OBJECTIFS_ACTIFS_CACHE[eleveId] = { themeId, seanceNumero } — le
+   dernier objectif fixé par cet élève dans "Mon carnet", tous
+   thèmes/séances confondus. Chargé une fois par poule connectée
+   (voir chargerObjectifsActifs), utilisé pour personnaliser le
+   orange/jaune quand CURRENT_SEANCE.CarnetActif est vrai. */
+let OBJECTIFS_ACTIFS_CACHE = {};
+let OBJECTIFS_ACTIFS_POULE_CHARGEE = null;
+
+function chargerObjectifsActifs(){
+  if(!CURRENT_POULE) return Promise.resolve();
+  if(OBJECTIFS_ACTIFS_POULE_CHARGEE === CURRENT_POULE.id) return Promise.resolve();
+  const ids = CURRENT_POULE.membres.map(m=>m.id);
+  return getCarnetEntriesPourEleves(ids).then(list=>{
+    const parEleve = {};
+    (list||[]).forEach(entry=>{
+      const existant = parEleve[entry.EleveID];
+      if(!existant || new Date(entry.Horodatage||0).getTime() > new Date(existant.Horodatage||0).getTime()) parEleve[entry.EleveID] = entry;
+    });
+    OBJECTIFS_ACTIFS_CACHE = {};
+    Object.keys(parEleve).forEach(eleveId=>{
+      OBJECTIFS_ACTIFS_CACHE[eleveId] = { themeId: parEleve[eleveId].ObjectifThemeID, themeNom: parEleve[eleveId].ObjectifThemeNom };
+    });
+    OBJECTIFS_ACTIFS_POULE_CHARGEE = CURRENT_POULE.id;
+  }).catch(()=>{});
+}
+
+// Thème à utiliser pour le travail individuel (orange) d'un élève donné :
+// son objectif personnel actif s'il en a un, sinon le thème de secours de
+// la séance (celui choisi par l'enseignant à la création).
+function themeActifPourEleve(eleveId){
+  const obj = OBJECTIFS_ACTIFS_CACHE[eleveId];
+  if(obj && obj.themeId && findTheme(obj.themeId)) return obj.themeId;
+  return CURRENT_SEANCE ? CURRENT_SEANCE.ThemeID : null;
+}
+
 const QUICK_ACCESS_KEY = 'bad_derniere_poule';
 const SESSION_KEY = 'bad_session_en_cours';
 
@@ -1258,11 +1318,14 @@ function reprendreSession(){
    ESPACE ÉLÈVE — accueil à 3 onglets (Leçon du jour / Banque / Stats)
    ============================================================ */
 function eleveHubTabsHtml(actif){
+  const carnetTab = (CURRENT_SEANCE && CURRENT_SEANCE.CarnetActif)
+    ? `<div class="tab ${actif==='carnet'?'active':''}" onclick="ouvrirOngletCarnet()">📓 Mon carnet</div>` : '';
   return `<div class="tabs" style="margin-bottom:16px;">
     <div class="tab ${actif==='lecon'?'active':''}" onclick="ouvrirOngletLecon()">Leçon du jour</div>
     <div class="tab ${actif==='banque'?'active':''}" onclick="ouvrirOngletBanque()">Banque d'exercices</div>
     <div class="tab ${actif==='techniques'?'active':''}" onclick="ouvrirOngletTechniques()">Techniques</div>
     <div class="tab ${actif==='stats'?'active':''}" onclick="renderEleveStats()">Statistiques</div>
+    ${carnetTab}
   </div>`;
 }
 
@@ -1337,6 +1400,158 @@ function ouvrirTechniqueDetail(id){
     ${t.ImageData ? `<div class="diagram-wrap"><img src="${t.ImageData}" style="max-width:100%; border-radius:8px; display:block; margin:0 auto;"></div>` : ''}
     <div class="card"><p style="white-space:pre-wrap; line-height:1.6; margin:0;">${(t.Texte||'').replace(/</g,'&lt;')}</p></div>`;
   showScreen('screen-technique-detail');
+}
+
+/* ============================================================
+   ONGLET ÉLÈVE — MON CARNET (AFL2, entraînement individualisé)
+   Visible uniquement si CURRENT_SEANCE.CarnetActif est vrai.
+   ============================================================ */
+let CARNET_ELEVE_SELECTIONNE = null;
+// Verrouillage local (pour cette session appareil) — évite de resoumettre
+// deux fois le même objectif si l'élève revient sur l'onglet.
+let CARNET_VALIDE_POUR = {};
+
+function ouvrirOngletCarnet(){
+  if(!CURRENT_SEANCE || !CURRENT_SEANCE.CarnetActif){ ouvrirOngletLecon(); return; }
+  if(!CURRENT_POULE){
+    document.getElementById('eleve-hub-tabs').innerHTML = eleveHubTabsHtml('carnet');
+    showScreen('screen-eleve-login');
+    return;
+  }
+  if(!CARNET_ELEVE_SELECTIONNE || !CURRENT_POULE.membres.some(m=>m.id===CARNET_ELEVE_SELECTIONNE)){
+    CARNET_ELEVE_SELECTIONNE = CURRENT_POULE.membres[0].id;
+  }
+  renderCarnet();
+  showScreen('screen-carnet');
+  chargerObjectifsActifs().then(()=>{
+    if(!document.getElementById('screen-carnet').classList.contains('hidden')) renderCarnet();
+  });
+}
+
+function changerCarnetEleve(){
+  CARNET_ELEVE_SELECTIONNE = document.getElementById('carnet-qui').value;
+  renderCarnet();
+}
+
+function renderCarnet(){
+  const el = document.getElementById('screen-carnet');
+  if(!CURRENT_POULE){
+    el.innerHTML = eleveHubTabsHtml('carnet') + '<div class="card"><p class="sub">Déclarez d\'abord votre poule dans l\'onglet "Leçon du jour".</p></div>';
+    return;
+  }
+  const eleveId = CARNET_ELEVE_SELECTIONNE;
+  const verrouKey = eleveId+'_'+CURRENT_SEANCE.ID;
+  const dejaValide = !!CARNET_VALIDE_POUR[verrouKey];
+
+  el.innerHTML = `${eleveHubTabsHtml('carnet')}
+    <h1>📓 Mon carnet d'entraînement</h1>
+    <p class="sub">Fixe ton axe de travail pour la prochaine séance individualisée, en fonction de ton araignée.</p>
+    <div class="card">
+      <label>C'est le carnet de qui ?</label>
+      <select id="carnet-qui" onchange="changerCarnetEleve()">
+        ${CURRENT_POULE.membres.map(m=>`<option value="${m.id}" ${m.id===eleveId?'selected':''}>${m.nom}</option>`).join('')}
+      </select>
+    </div>
+    <div id="carnet-contenu"><div class="card"><p class="sub">Chargement de l'araignée…</p></div></div>`;
+  chargerCarnetContenu(eleveId, dejaValide);
+}
+
+function chargerCarnetContenu(eleveId, dejaValide){
+  getProgressionEleve(eleveId).then(rows=>{
+    const zone = document.getElementById('carnet-contenu');
+    if(!zone) return; // l'élève a changé d'écran entre temps
+    const stats = computeStats(rows);
+    const axes = Object.keys(stats.parChapitre).map(nom=>{
+      const d = stats.parChapitre[nom];
+      return { label: nom.replace(/^Chap\. \d+ — /,''), pct: d.withObj ? 100*d.reussis/d.withObj : 0, withObj: d.withObj };
+    }).filter(a=>a.withObj>0);
+
+    const objAvant = OBJECTIFS_ACTIFS_CACHE[eleveId];
+    let bilanHtml = '';
+    if(objAvant && objAvant.themeId){
+      const found = findTheme(objAvant.themeId);
+      const nomTheme = found ? found.theme.nom : (objAvant.themeNom || objAvant.themeId);
+      const rowsTheme = rows.filter(r=>r.ThemeID===objAvant.themeId && (r.ObjectifAtteint==='oui'||r.ObjectifAtteint==='non'));
+      const reussisTheme = rowsTheme.filter(r=>r.ObjectifAtteint==='oui').length;
+      bilanHtml = `<div class="card" style="border-color:#7048e8;">
+        <p style="margin:0;"><strong>🎯 Ton objectif la dernière fois :</strong> ${nomTheme}</p>
+        <p class="sub" style="margin:6px 0 0;">${rowsTheme.length
+          ? `${reussisTheme}/${rowsTheme.length} contrats réussis depuis (${Math.round(100*reussisTheme/rowsTheme.length)}%)`
+          : "Pas encore de résultat enregistré sur ce thème depuis — pense à t'y entraîner avant de faire le bilan !"}</p>
+      </div>`;
+    }
+
+    let radarHtml;
+    if(axes.length < 3){
+      radarHtml = `<div class="card"><p class="sub">Pas encore assez de chapitres avec résultats pour tracer l'araignée (au moins 3 nécessaires). Choisis ton objectif au feeling pour cette fois !</p></div>`;
+    } else {
+      radarHtml = `<div class="card" style="text-align:center;">${radarChartSVG(axes, true)}
+        <p class="sub" style="margin-top:8px;">🔴🟠 à travailler en priorité — 🟢🔵 points forts. À toi d'analyser et de choisir !</p>
+      </div>`;
+    }
+
+    let formHtml;
+    if(dejaValide){
+      formHtml = `<div class="card"><div class="msg ok">✅ Objectif déjà validé pour cette séance.</div></div>`;
+    } else {
+      formHtml = `<div class="card">
+        <label>Mon prochain axe de travail</label>
+        <select id="carnet-objectif-theme">${objectifThemeOptionsHtml()}</select>
+        <label>Ce que je retiens de cette séance (facultatif)</label>
+        <textarea id="carnet-bilan-texte" rows="3" placeholder="Ex : j'ai bien progressé sur l'amorti, je continue / je change pour travailler le smash..."></textarea>
+        <button class="btn" id="carnet-valider-btn" onclick="validerCarnetUI('${eleveId}')">✓ Valider mon objectif</button>
+        <div id="carnet-msg"></div>
+      </div>`;
+    }
+
+    zone.innerHTML = bilanHtml + radarHtml + formHtml;
+  }).catch(gsFail);
+}
+
+// Liste des thèmes disponibles pour fixer un objectif — thèmes intégrés
+// (non masqués) et thèmes personnalisés complets uniquement (pas les
+// simples exercices personnalisés, qui n'ont qu'une seule situation).
+function objectifThemeOptionsHtml(){
+  let html = '<option value="">— Choisir un thème —</option>';
+  getChapitresAffiches().forEach(ch=>{
+    const themes = getThemesAffiches(ch.id);
+    const themesPerso = THEMES_PERSONNALISES_CACHE.filter(tp=>String(tp.ChapitreID)===String(ch.id));
+    if(!themes.length && !themesPerso.length) return;
+    html += `<optgroup label="${ch.nom}">`;
+    themes.forEach(t=>{ html += `<option value="${t.id}">${t.nom}</option>`; });
+    themesPerso.forEach(tp=>{ html += `<option value="theme-perso-${tp.ID}">🧩 ${tp.Nom}</option>`; });
+    html += `</optgroup>`;
+  });
+  CUSTOM_CHAPITRES_CACHE.forEach(chCustom=>{
+    const themesPerso = THEMES_PERSONNALISES_CACHE.filter(tp=>tp.ChapitreID===chCustom.ID);
+    if(!themesPerso.length) return;
+    html += `<optgroup label="📁 ${chCustom.Nom}">`;
+    themesPerso.forEach(tp=>{ html += `<option value="theme-perso-${tp.ID}">🧩 ${tp.Nom}</option>`; });
+    html += `</optgroup>`;
+  });
+  return html;
+}
+
+function validerCarnetUI(eleveId){
+  const themeSelect = document.getElementById('carnet-objectif-theme');
+  const themeId = themeSelect.value;
+  if(!themeId) return alert('Choisis un thème pour ton prochain objectif.');
+  const found = findTheme(themeId);
+  const nomTheme = found ? found.theme.nom : themeId;
+  const bilan = document.getElementById('carnet-bilan-texte').value.trim();
+  const btn = document.getElementById('carnet-valider-btn');
+  btn.disabled = true; btn.innerText = '⏳ Enregistrement…';
+  const nom = (CURRENT_POULE.membres.find(m=>m.id===eleveId)||{}).nom || '';
+  saveCarnetEntry({
+    SeanceID: CURRENT_SEANCE.ID, EleveID: eleveId, PouleLabel: CURRENT_POULE.id,
+    ObjectifThemeID: themeId, ObjectifThemeNom: nomTheme, Bilan: bilan,
+    Horodatage: new Date().toISOString()
+  }).then(()=>{
+    OBJECTIFS_ACTIFS_CACHE[eleveId] = { themeId: themeId, themeNom: nomTheme };
+    CARNET_VALIDE_POUR[eleveId+'_'+CURRENT_SEANCE.ID] = true;
+    showToast('✅ Objectif enregistré : '+nomTheme+' — '+nom);
+    renderCarnet();
+  }).catch(e=>{ btn.disabled=false; btn.innerText='✓ Valider mon objectif'; gsFail(e); });
 }
 
 
@@ -1444,8 +1659,8 @@ const PHASES = [
 ];
 let scoresLive = {}; // pour compteurs de match
 
-function pouleSelectHtml(id){
-  return `<select id="${id}">${CURRENT_POULE.membres.map(mem=>`<option value="${mem.id}">${mem.nom}</option>`).join('')}</select>`;
+function pouleSelectHtml(id, preselected){
+  return `<select id="${id}">${CURRENT_POULE.membres.map(mem=>`<option value="${mem.id}" ${preselected===mem.id?'selected':''}>${mem.nom}</option>`).join('')}</select>`;
 }
 
 function generateMatchups(membres){
@@ -1469,6 +1684,8 @@ function renderEleveApp(){
 function logoutEleve(){
   effacerSession();
   CURRENT_ELEVE=null; CURRENT_SEANCE=null; CURRENT_POULE=null; CURRENT_CHAPITRE=null; CURRENT_THEME_ID=null;
+  OBJECTIFS_ACTIFS_CACHE = {}; OBJECTIFS_ACTIFS_POULE_CHARGEE = null;
+  CARNET_ELEVE_SELECTIONNE = null; CARNET_VALIDE_POUR = {}; ORANGE_PERSO_ELEVE = null;
   document.getElementById('eleve-code').value='';
   document.getElementById('eleve-codes-autres').value='';
   document.getElementById('eleve-numero-seance').value='';
@@ -1482,13 +1699,22 @@ function renderLeconEleve(){
   const membres = CURRENT_POULE.membres.map(m=>m.nom).join(', ');
   sauvegarderSession();
 
+  if(CURRENT_SEANCE.CarnetActif){
+    chargerObjectifsActifs().then(()=>{
+      if(phaseActuelle==='orange' && !document.getElementById('screen-eleve').classList.contains('hidden')){
+        const content = document.getElementById('phase-content');
+        if(content) content.innerHTML = renderOrange(chapitre, theme);
+      }
+    });
+  }
+
   let html = `
     <div class="topbar">
       <p class="link" onclick="logoutEleve()">&larr; déconnexion</p>
       <p class="link" onclick="renderMaProgression()">Ma progression &rarr;</p>
     </div>
     <h1>${theme.nom}</h1>
-    <div class="sub">Poule : ${membres}</div>
+    <div class="sub">Poule : ${membres}${CURRENT_SEANCE.CarnetActif ? ' · <span style="color:#7048e8; font-weight:700;">📓 séance individualisée</span>' : ''}</div>
     <div class="phase-nav">`;
   PHASES.forEach(p=>{
     const cls = p.key===phaseActuelle ? 'active '+p.key : '';
@@ -1676,11 +1902,53 @@ function renderJaune(chapitre, theme){
     ${renderScoreCard('jaune', theme.id)}`;
 }
 
+let ORANGE_PERSO_ELEVE = null;
+
+function changerOrangePersoEleve(){
+  ORANGE_PERSO_ELEVE = document.getElementById('orange-perso-qui').value;
+  renderLeconEleve();
+}
+
 function renderOrange(chapitre, theme){
+  if(CURRENT_SEANCE && CURRENT_SEANCE.CarnetActif){
+    return renderOrangePersonnalise();
+  }
   const sa = theme.sa1;
   return `<div class="banniere orange">🟠 Situation décontextualisée <span class="tag">~20 min</span></div>
     ${ficheSA(sa, "Situation décontextualisée")}
     ${compteurContrats('orange', theme.id)}`;
+}
+
+// Version individualisée : chaque élève de la poule travaille sur son
+// propre objectif (celui fixé dans "Mon carnet"), ou sur le thème de
+// secours de la séance s'il n'en a pas encore fixé un.
+function renderOrangePersonnalise(){
+  if(!ORANGE_PERSO_ELEVE || !CURRENT_POULE.membres.some(m=>m.id===ORANGE_PERSO_ELEVE)){
+    ORANGE_PERSO_ELEVE = CURRENT_POULE.membres[0].id;
+  }
+  const eleveId = ORANGE_PERSO_ELEVE;
+  const nom = (CURRENT_POULE.membres.find(m=>m.id===eleveId)||{}).nom || '';
+  const themeId = themeActifPourEleve(eleveId);
+  const found = themeId ? findTheme(themeId) : null;
+  const surSecours = !(OBJECTIFS_ACTIFS_CACHE[eleveId] && OBJECTIFS_ACTIFS_CACHE[eleveId].themeId);
+
+  let corps;
+  if(!found){
+    corps = `<div class="card"><p class="sub">Thème introuvable — vérifiez la configuration de la séance.</p></div>`;
+  } else {
+    corps = `${surSecours ? `<div class="msg" style="background:#fff4e6; color:#e8590c;">Pas encore d'objectif personnel fixé pour ${nom} — thème de secours de la séance utilisé.</div>` : ''}
+      ${ficheSA(found.theme.sa1, "Situation décontextualisée — objectif de "+nom)}
+      ${compteurContrats('orange', found.theme.id, eleveId)}`;
+  }
+
+  return `<div class="banniere orange">🟠 Situation décontextualisée — entraînement individualisé <span class="tag">~20 min</span></div>
+    <div class="card">
+      <label>Qui s'entraîne ?</label>
+      <select id="orange-perso-qui" onchange="changerOrangePersoEleve()">
+        ${CURRENT_POULE.membres.map(m=>`<option value="${m.id}" ${m.id===eleveId?'selected':''}>${m.nom}</option>`).join('')}
+      </select>
+    </div>
+    ${corps}`;
 }
 
 function renderBleu(chapitre, theme){
@@ -2158,11 +2426,11 @@ function enregistrerServicePoints(phase, themeId){
   }).catch(e=>{ s.locked=false; gsFail(e); renderLeconEleve(); });
 }
 
-function compteurContrats(phase, themeId){
+function compteurContrats(phase, themeId, preselectedEleveId){
   return `<div class="card">
     <p><strong>Suivi des essais (contrat de réussite)</strong></p>
     <div class="row">
-      <div><label>Pour qui ?</label>${pouleSelectHtml('essai-qui-'+themeId)}</div>
+      <div><label>Pour qui ?</label>${pouleSelectHtml('essai-qui-'+themeId, preselectedEleveId)}</div>
     </div>
     <div class="row" id="essais-${themeId}">
       ${[1,2,3].map(i=>`
@@ -2386,7 +2654,7 @@ function historiqueSeancesHtml(rows){
 // Araignée (radar chart) SVG : un axe par chapitre où l'élève a des
 // résultats, rayon proportionnel au % de contrats réussis. Fait ressortir
 // visuellement les points forts (loin du centre) et faibles (près du centre).
-function radarChartSVG(axes){
+function radarChartSVG(axes, colorise){
   const size = 260, cx = size/2, cy = size/2, maxR = 85;
   const n = axes.length;
   const angleFor = i => (Math.PI*2*i/n) - Math.PI/2;
@@ -2404,9 +2672,10 @@ function radarChartSVG(axes){
   axes.forEach((ax,i)=>{
     const a = angleFor(i);
     const x2 = cx+maxR*Math.cos(a), y2 = cy+maxR*Math.sin(a);
+    const axeColor = colorise ? tierVictoire(ax.pct).color : '#333';
     axisHtml += `<line x1="${cx}" y1="${cy}" x2="${x2}" y2="${y2}" stroke="#e2ddd3" stroke-width="1"/>`;
     const lx = cx+(maxR+34)*Math.cos(a), ly = cy+(maxR+34)*Math.sin(a);
-    axisHtml += `<text x="${lx}" y="${ly-3}" font-size="9.5" text-anchor="middle" fill="#333" font-weight="700">${ax.label}</text>`;
+    axisHtml += `<text x="${lx}" y="${ly-3}" font-size="9.5" text-anchor="middle" fill="${colorise?axeColor:'#333'}" font-weight="700">${ax.label}</text>`;
     axisHtml += `<text x="${lx}" y="${ly+9}" font-size="9" text-anchor="middle" fill="#888">${Math.round(ax.pct)}%</text>`;
   });
 
@@ -2416,12 +2685,13 @@ function radarChartSVG(axes){
   }).join(' ');
   const dots = axes.map((ax,i)=>{
     const a = angleFor(i), r = maxR*(Math.max(0,Math.min(100,ax.pct))/100);
-    return `<circle cx="${cx+r*Math.cos(a)}" cy="${cy+r*Math.sin(a)}" r="4" fill="#2f9e44"/>`;
+    const dotColor = colorise ? tierVictoire(ax.pct).color : '#2f9e44';
+    return `<circle cx="${cx+r*Math.cos(a)}" cy="${cy+r*Math.sin(a)}" r="5" fill="${dotColor}"/>`;
   }).join('');
 
   return `<svg viewBox="0 0 ${size} ${size+10}" style="width:100%; max-width:300px; display:block; margin:0 auto;">
     ${gridHtml}${axisHtml}
-    <polygon points="${dataPts}" fill="#2f9e44" fill-opacity="0.3" stroke="#2f9e44" stroke-width="2"/>
+    <polygon points="${dataPts}" fill="#2f9e44" fill-opacity="0.18" stroke="#2f9e44" stroke-width="2"/>
     ${dots}
   </svg>`;
 }
@@ -2858,8 +3128,13 @@ function renderAdminSeances(c){
       <label>Titre libre</label><input id="new-seance-titre" placeholder="Ex : Séance 3">
       <label>Chapitre</label>
       <select id="new-seance-chapitre" onchange="updateThemeOptions()">${chapitreOptionsHtml()}</select>
-      <label>Thème travaillé</label>
+      <label>Thème travaillé <span class="sub">(sert de thème de secours pour le carnet — voir ci-dessous)</span></label>
       <select id="new-seance-theme"></select>
+      <label style="display:flex; align-items:center; gap:8px; margin-top:10px;">
+        <input type="checkbox" id="new-seance-carnet" style="width:auto;">
+        📓 Activer "Mon carnet" pour cette séance (entraînement individualisé AFL2)
+      </label>
+      <p class="sub" style="margin-top:-4px;">Débloque un onglet où chaque élève fixe son propre axe de travail. Le thème choisi ci-dessus sert de filet de sécurité pour un élève qui n'aurait pas encore d'objectif personnel actif.</p>
       <button class="btn" onclick="createSeanceUI()">+ Créer la séance</button>
     </div>
     <div class="card" id="liste-seances">Chargement…</div>`;
@@ -2876,7 +3151,7 @@ function renderAdminSeances(c){
     seances.sort((a,b)=> Number(b.Numero)-Number(a.Numero));
     seances.forEach(s=>{
       const t = findTheme(s.ThemeID);
-      html += `<tr><td><strong>${s.Numero}</strong></td><td>${s.Date}</td><td>${s.Titre}</td><td>${t?t.theme.nom:s.ThemeID}</td>
+      html += `<tr><td><strong>${s.Numero}</strong></td><td>${s.Date}</td><td>${s.Titre}${s.CarnetActif ? ' <span class="badge" style="background:#7048e8;">📓 carnet</span>' : ''}</td><td>${t?t.theme.nom:s.ThemeID}</td>
         <td><span class="link" onclick="deleteSeanceUI('${s.ID}')">supprimer</span></td></tr>`;
     });
     html += '</table>';
@@ -2911,9 +3186,10 @@ function createSeanceUI(){
   const themeId = document.getElementById('new-seance-theme').value;
   const numero = document.getElementById('new-seance-numero').value;
   const titre = document.getElementById('new-seance-titre').value || ('Séance du '+date);
+  const carnetActif = document.getElementById('new-seance-carnet').checked;
   if(!date) return alert('Choisissez une date');
   if(!numero) return alert('Indiquez un numéro de séance');
-  createSeance(date, chapitreId, themeId, titre, numero)
+  createSeance(date, chapitreId, themeId, titre, numero, carnetActif)
     .then(()=>{ renderAdminSeances(document.getElementById('admin-content')); }).catch(gsFail);
 }
 
