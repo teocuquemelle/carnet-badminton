@@ -171,7 +171,7 @@
 
   <!-- ===================== BANQUE D'EXERCICES (ÉLÈVE) ===================== -->
   <div id="screen-banque" class="hidden"></div>
-  <div id="screen-banque-theme" class="hidden"></div>
+  <div id="screen-banque-lecon" class="hidden"></div>
 
   <!-- ===================== TECHNIQUES (ÉLÈVE) ===================== -->
   <div id="screen-techniques" class="hidden"></div>
@@ -272,11 +272,11 @@ window.addEventListener('load', ()=>{
       .then(()=> typeof getEleves === 'function' ? getEleves() : null)
       .then(()=> typeof getSeances === 'function' ? getSeances() : null)
       .then(()=> typeof rafraichirExercicesCustom === 'function' ? rafraichirExercicesCustom() : null)
-      .then(()=> typeof rafraichirChapitresCustom === 'function' ? rafraichirChapitresCustom() : null)
+      .then(()=> typeof rafraichirThemesCustom === 'function' ? rafraichirThemesCustom() : null)
+      .then(()=> typeof rafraichirLeconOverrides === 'function' ? rafraichirLeconOverrides() : null)
       .then(()=> typeof rafraichirThemeOverrides === 'function' ? rafraichirThemeOverrides() : null)
-      .then(()=> typeof rafraichirChapitreOverrides === 'function' ? rafraichirChapitreOverrides() : null)
       .then(()=> typeof rafraichirTechniques === 'function' ? rafraichirTechniques() : null)
-      .then(()=> typeof rafraichirThemesPersonnalises === 'function' ? rafraichirThemesPersonnalises() : null)
+      .then(()=> typeof rafraichirLeconsPersonnalises === 'function' ? rafraichirLeconsPersonnalises() : null)
       .then(()=> console.log('📥 Données mises en cache pour un usage hors-ligne.'))
       .catch(err=> console.warn('Préchargement hors-ligne incomplet :', err));
   }, 800);
@@ -285,12 +285,12 @@ window.addEventListener('load', ()=>{
 
 <script>
 /* ============================================================
-   DONNÉES DES 13 THÈMES (d'après le support "Construire une
+   DONNÉES DES 13 LEÇONS (d'après le support "Construire une
    leçon de badminton" — N. Mascret / AEEPS)
    ============================================================ */
-const CHAPITRES = [
+const THEMES = [
   {
-    id: 1, nom: "La production d'un service", couleurRef: "#1971c2",
+    id: 1, nom: "La production d'un service", couleur: "#d6336c", couleurRef: "#1971c2",
     reference: {
       but: "Match en 2 sets gagnants de 9 points, poules de 3-4, un ou deux arbitres.",
       regleSpeciale: {
@@ -301,7 +301,7 @@ const CHAPITRES = [
       bonus2x: { "1-1": false, "1-2": true },
       diagram: { "1-1":"full", "1-2":"full" }
     },
-    themes: [
+    lecons: [
       { id: "1-1", nom: "Production d'un service réglementaire",
         sa1: { niveaux:[1], but:"Réussir le maximum de services.",
                amenagement:"2 joueurs, 1 arbitre, 2 volants/joueur, zone de service matérialisée.",
@@ -339,7 +339,7 @@ const CHAPITRES = [
     ]
   },
   {
-    id: 2, nom: "L'atteinte de zones dangereuses", couleurRef: "#1971c2",
+    id: 2, nom: "L'atteinte de zones dangereuses", couleur: "#4263eb", couleurRef: "#1971c2",
     reference: {
       but: "Match en 2 sets gagnants de 9 points, poules de 3-4.",
       regleSpeciale: {
@@ -352,7 +352,7 @@ const CHAPITRES = [
       bonus2x: { "2-1": true, "2-2": true, "2-3": true, "2-4": true },
       diagram: { "2-1":"zoneAvantArriere", "2-2":"zoneAvantArriere", "2-3":"zoneAvantArriere", "2-4":"zoneAvantArriere" }
     },
-    themes: [
+    lecons: [
       { id: "2-1", nom: "L'envoi dans les zones dangereuses",
         sa1: { niveaux:[1,2,3,4,5], but:"Atteindre les zones matérialisées (avant/arrière).",
                amenagement:"Un lanceur, un joueur, un arbitre.",
@@ -400,9 +400,9 @@ const CHAPITRES = [
                critere:{ type:"mortSubiteWin", texte:"Contrat réussi si le match est gagné par mort subite." } } },
       { id: "2-4", nom: "L'exploitation de tout le terrain",
         sa1: { niveaux:[2,3,4,5], but:"Optimisation des situations décontextualisées précédentes, avec des zones plus petites.",
-               amenagement:"Reprend les dispositifs des 3 thèmes précédents du chapitre.",
+               amenagement:"Reprend les dispositifs des 3 leçons précédents du thème.",
                consignes:"Adapter les zones utilisées précédemment (réduction de la taille).",
-               criteres:"Idem thèmes précédents.",
+               criteres:"Idem leçons précédents.",
                variables:{moins:"—", plus:"—"},
                diagram:"zoneAvantArriere" },
         sa2: { niveaux:[2,3,4,5], but:"Remporter les 7 zones avant l'adversaire (demi-terrain avec couloirs de double).",
@@ -415,7 +415,7 @@ const CHAPITRES = [
     ]
   },
   {
-    id: 3, nom: "La défense de son terrain", couleurRef: "#1971c2",
+    id: 3, nom: "La défense de son terrain", couleur: "#0ca678", couleurRef: "#1971c2",
     reference: {
       but: "Match en 2 sets gagnants de 9 points, poules de 3-4.",
       regleSpeciale: {
@@ -429,7 +429,7 @@ const CHAPITRES = [
       mortSubite: { "3-4": { target:9, specialLabel:"🎯 Point direct en zone revers (victoire immédiate)" } },
       diagram: { "3-1":"full", "3-2":"full", "3-3":"full", "3-4":"backhand" }
     },
-    themes: [
+    lecons: [
       { id: "3-1", nom: "Le contact volant-raquette",
         sa1: { niveaux:[1], but:"Renvoyer un maximum de volants dans le terrain adverse.",
                amenagement:"Par 3 (lanceur, frappeur, compteur), terrain entier ou demi-terrain.",
@@ -494,7 +494,7 @@ const CHAPITRES = [
     ]
   },
   {
-    id: 4, nom: "L'utilisation du smash", couleurRef: "#1971c2",
+    id: 4, nom: "L'utilisation du smash", couleur: "#ae3ec9", couleurRef: "#1971c2",
     reference: {
       but: "Match en 2 sets gagnants de 9 points, surfilet à 30-40cm au-dessus du filet.",
       regleSpeciale: {
@@ -506,7 +506,7 @@ const CHAPITRES = [
       bonus2x: { "4-1": true, "4-2": true, "4-3": true },
       diagram: { "4-1":"full", "4-2":"full", "4-3":"lateralZones" }
     },
-    themes: [
+    lecons: [
       { id: "4-1", nom: "La réalisation technique",
         sa1: { niveaux:[2,3,4,5], but:"Accélérer suffisamment sa frappe.",
                amenagement:"2 joueurs (serveur/smasheur) + 1 compteur, 2 lignes tracées au sol.",
@@ -518,7 +518,7 @@ const CHAPITRES = [
                amenagement:"Surfilet 30-40cm au-dessus du filet.",
                consignes:"Le premier arrivé à 5 points gagne. Marquer par smash ou rush offre la victoire immédiate.",
                criteres:"Contrat réussi par match : victoire obtenue par mort subite. Réussir au moins 66% de ses contrats.",
-               variables:{moins:"Mort subite sur 1 seul volant touché.", plus:"Placer ses smashes (cf thème 4-3)."},
+               variables:{moins:"Mort subite sur 1 seul volant touché.", plus:"Placer ses smashes (cf leçon 4-3)."},
                diagram:"full", scoreMode:"mortSubite",
                mortSubite:{ target:5, specialLabel:"🎯 Point marqué par smash/rush (victoire immédiate)" },
                critere:{ type:"mortSubiteWin", texte:"Contrat réussi si le match est gagné par mort subite." } } },
@@ -556,35 +556,35 @@ const CHAPITRES = [
   }
 ];
 
-function findTheme(themeId){
-  for(const c of CHAPITRES){
-    const t=c.themes.find(t=>t.id===themeId);
+function findLecon(leconId){
+  for(const c of THEMES){
+    const t=c.lecons.find(t=>t.id===leconId);
     if(t){
-      const ovT = THEME_OVERRIDES_CACHE.find(o=>o.ID===t.id);
-      if(ovT && ovT.Supprime) return null; // thème masqué par l'enseignant
-      const ovC = CHAPITRE_OVERRIDES_CACHE.find(o=>o.ID===String(c.id));
-      if(ovC && ovC.Supprime) return null; // chapitre masqué par l'enseignant
-      return appliquerSurchargeTheme(c, t);
+      const ovT = LECON_OVERRIDES_CACHE.find(o=>o.ID===t.id);
+      if(ovT && ovT.Supprime) return null; // leçon masqué par l'enseignant
+      const ovC = THEME_OVERRIDES_CACHE.find(o=>o.ID===String(c.id));
+      if(ovC && ovC.Supprime) return null; // thème masqué par l'enseignant
+      return appliquerSurchargeLecon(c, t);
     }
   }
-  const custom = CUSTOM_EXERCICES_CACHE.find(ex => ('custom-'+ex.ID)===themeId);
-  if(custom) return customExerciceToThemeShape(custom);
-  const themePerso = THEMES_PERSONNALISES_CACHE.find(tp => ('theme-perso-'+tp.ID)===themeId);
-  if(themePerso) return themePersonaliseToThemeShape(themePerso);
+  const custom = CUSTOM_EXERCICES_CACHE.find(ex => ('custom-'+ex.ID)===leconId);
+  if(custom) return customExerciceToLeconShape(custom);
+  const leconPerso = LECONS_PERSONNALISES_CACHE.find(tp => ('lecon-perso-'+tp.ID)===leconId);
+  if(leconPerso) return leconPersonaliseToLeconShape(leconPerso);
   return null;
 }
 
-// Cache client des surcharges de thèmes et de chapitres intégrés (voir
-// rafraichirThemeOverrides / rafraichirChapitreOverrides).
+// Cache client des surcharges de leçons et de thèmes intégrés (voir
+// rafraichirLeconOverrides / rafraichirThemeOverrides).
+let LECON_OVERRIDES_CACHE = [];
 let THEME_OVERRIDES_CACHE = [];
-let CHAPITRE_OVERRIDES_CACHE = [];
+
+function rafraichirLeconOverrides(){
+  return getLeconOverrides().then(list=>{ LECON_OVERRIDES_CACHE = list || []; return LECON_OVERRIDES_CACHE; }).catch(()=>[]);
+}
 
 function rafraichirThemeOverrides(){
   return getThemeOverrides().then(list=>{ THEME_OVERRIDES_CACHE = list || []; return THEME_OVERRIDES_CACHE; }).catch(()=>[]);
-}
-
-function rafraichirChapitreOverrides(){
-  return getChapitreOverrides().then(list=>{ CHAPITRE_OVERRIDES_CACHE = list || []; return CHAPITRE_OVERRIDES_CACHE; }).catch(()=>[]);
 }
 
 // Cache client des fiches techniques (conseils de l'enseignant, consultées
@@ -594,52 +594,77 @@ function rafraichirTechniques(){
   return getTechniques().then(list=>{ TECHNIQUES_CACHE = list || []; return TECHNIQUES_CACHE; }).catch(()=>[]);
 }
 
-// Cache client des thèmes personnalisés COMPLETS (avec les 3 situations
+// Cache client des leçons personnalisés COMPLETS (avec les 3 situations
 // habituelles — match à thème / décontextualisée / référence — créés par
-// l'enseignant, au même niveau qu'un thème intégré). Voir
-// themePersonaliseToThemeShape() plus bas, utilisée par findTheme().
-let THEMES_PERSONNALISES_CACHE = [];
-function rafraichirThemesPersonnalises(){
-  return getThemesPersonnalises().then(list=>{ THEMES_PERSONNALISES_CACHE = list || []; return THEMES_PERSONNALISES_CACHE; }).catch(()=>[]);
+// l'enseignant, au même niveau qu'un leçon intégré). Voir
+// leconPersonaliseToLeconShape() plus bas, utilisée par findLecon().
+let LECONS_PERSONNALISES_CACHE = [];
+function rafraichirLeconsPersonnalises(){
+  return getLeconsPersonnalises().then(list=>{ LECONS_PERSONNALISES_CACHE = list || []; return LECONS_PERSONNALISES_CACHE; }).catch(()=>[]);
 }
 
-// Liste des chapitres intégrés à AFFICHER (nom éventuellement renommé,
-// chapitres masqués exclus) — à utiliser partout où l'on parcourt les
-// chapitres pour les montrer à l'utilisateur (banque, création de séance...).
-function getChapitresAffiches(){
-  return CHAPITRES.map(ch=>{
-    const ov = CHAPITRE_OVERRIDES_CACHE.find(o=>o.ID===String(ch.id));
+// Liste des thèmes intégrés à AFFICHER (nom éventuellement renommé,
+// thèmes masqués exclus) — à utiliser partout où l'on parcourt les
+// thèmes pour les montrer à l'utilisateur (banque, création de séance...).
+function getThemesAffiches(){
+  return THEMES.map(ch=>{
+    const ov = THEME_OVERRIDES_CACHE.find(o=>o.ID===String(ch.id));
     if(ov && ov.Supprime) return null;
-    return Object.assign({}, ch, { nom: (ov && ov.Nom) ? ov.Nom : ch.nom });
+    return Object.assign({}, ch, {
+      nom: (ov && ov.Nom) ? ov.Nom : ch.nom,
+      couleur: (ov && ov.Couleur) ? ov.Couleur : ch.couleur
+    });
   }).filter(Boolean);
 }
 
-// Liste des thèmes AFFICHÉS d'un chapitre intégré (nom éventuellement
-// renommé, thèmes masqués exclus).
-function getThemesAffiches(chapitreId){
-  const ch = CHAPITRES.find(c=>c.id===chapitreId);
+// Couleur d'identité visuelle d'un thème (intégré OU personnalisé),
+// utilisée partout où un thème est affiché (banque, listes admin,
+// stats "par thème"). Accepte un id de thème intégré (nombre) ou
+// l'ID Firestore d'un thème personnalisé (chaîne). Couleur neutre
+// de repli si le thème est introuvable.
+const COULEUR_THEME_PAR_DEFAUT = '#495057';
+function couleurTheme(themeId){
+  if(themeId===null || themeId===undefined) return COULEUR_THEME_PAR_DEFAUT;
+  const idNum = Number(themeId);
+  if(!Number.isNaN(idNum) && String(idNum)===String(themeId).trim()){
+    const ch = getThemesAffiches().find(c=>c.id===idNum);
+    if(ch) return ch.couleur || COULEUR_THEME_PAR_DEFAUT;
+  }
+  const custom = CUSTOM_THEMES_CACHE.find(c=>c.ID===themeId);
+  if(custom) return custom.Couleur || COULEUR_THEME_PAR_DEFAUT;
+  return COULEUR_THEME_PAR_DEFAUT;
+}
+// Petite pastille colorée réutilisable devant un nom de thème.
+function pastilleTheme(themeId){
+  return `<span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:${couleurTheme(themeId)}; margin-right:6px; flex-shrink:0;"></span>`;
+}
+
+// Liste des leçons AFFICHÉS d'un thème intégré (nom éventuellement
+// renommé, leçons masqués exclus).
+function getLeconsAffiches(themeId){
+  const ch = THEMES.find(c=>c.id===themeId);
   if(!ch) return [];
-  return ch.themes.map(t=>{
-    const ov = THEME_OVERRIDES_CACHE.find(o=>o.ID===t.id);
+  return ch.lecons.map(t=>{
+    const ov = LECON_OVERRIDES_CACHE.find(o=>o.ID===t.id);
     if(ov && ov.Supprime) return null;
-    return Object.assign({}, t, { nom: (ov && ov.NomTheme) ? ov.NomTheme : t.nom });
+    return Object.assign({}, t, { nom: (ov && ov.NomLecon) ? ov.NomLecon : t.nom });
   }).filter(Boolean);
 }
 
-// Fusionne la surcharge éventuelle d'un thème intégré (texte, critère,
+// Fusionne la surcharge éventuelle d'un leçon intégré (texte, critère,
 // image, compteur modifiés par l'enseignant) par-dessus la version
-// d'origine, SANS jamais modifier la donnée statique CHAPITRES elle-même
+// d'origine, SANS jamais modifier la donnée statique THEMES elle-même
 // (on travaille sur une copie).
-function appliquerSurchargeTheme(chapitre, theme){
-  const ov = THEME_OVERRIDES_CACHE.find(o=>o.ID===theme.id);
-  const ovC = CHAPITRE_OVERRIDES_CACHE.find(o=>o.ID===String(chapitre.id));
-  if(!ov && !ovC) return { chapitre, theme };
-  const t2 = JSON.parse(JSON.stringify(theme));
-  const c2 = JSON.parse(JSON.stringify(chapitre));
+function appliquerSurchargeLecon(theme, lecon){
+  const ov = LECON_OVERRIDES_CACHE.find(o=>o.ID===lecon.id);
+  const ovC = THEME_OVERRIDES_CACHE.find(o=>o.ID===String(theme.id));
+  if(!ov && !ovC) return { theme, lecon };
+  const t2 = JSON.parse(JSON.stringify(lecon));
+  const c2 = JSON.parse(JSON.stringify(theme));
 
   if(ovC && ovC.Nom) c2.nom = ovC.Nom;
-  if(ov && ov.NomTheme) t2.nom = ov.NomTheme;
-  if(!ov) return { chapitre: c2, theme: t2 };
+  if(ov && ov.NomLecon) t2.nom = ov.NomLecon;
+  if(!ov) return { theme: c2, lecon: t2 };
 
   if(ov.But1!==undefined) t2.sa1.but = ov.But1;
   if(ov.Amenagement1!==undefined) t2.sa1.amenagement = ov.Amenagement1;
@@ -677,44 +702,44 @@ function appliquerSurchargeTheme(chapitre, theme){
     }
   }
 
-  if(ov.RegleSpeciale!==undefined) c2.reference.regleSpeciale[theme.id] = ov.RegleSpeciale;
+  if(ov.RegleSpeciale!==undefined) c2.reference.regleSpeciale[lecon.id] = ov.RegleSpeciale;
   if(ov.ButReference!==undefined) c2.reference.but = ov.ButReference;
   if(ov.ImageDataRef) c2.reference.imageDataRef = ov.ImageDataRef;
 
-  return { chapitre: c2, theme: t2 };
+  return { theme: c2, lecon: t2 };
 }
 
 // Cache client des exercices personnalisés (peuplé au chargement, voir
-// rafraichirExercicesCustom). Permet à findTheme() de rester synchrone,
-// comme pour les 13 thèmes intégrés.
+// rafraichirExercicesCustom). Permet à findLecon() de rester synchrone,
+// comme pour les 13 leçons intégrés.
 let CUSTOM_EXERCICES_CACHE = [];
-let CUSTOM_CHAPITRES_CACHE = [];
+let CUSTOM_THEMES_CACHE = [];
 
 function rafraichirExercicesCustom(){
   return getExercicesCustom().then(list=>{ CUSTOM_EXERCICES_CACHE = list || []; return CUSTOM_EXERCICES_CACHE; }).catch(()=>[]);
 }
 
-function rafraichirChapitresCustom(){
-  return getChapitresCustom().then(list=>{ CUSTOM_CHAPITRES_CACHE = list || []; return CUSTOM_CHAPITRES_CACHE; }).catch(()=>[]);
+function rafraichirThemesCustom(){
+  return getThemesCustom().then(list=>{ CUSTOM_THEMES_CACHE = list || []; return CUSTOM_THEMES_CACHE; }).catch(()=>[]);
 }
 
-// Retrouve le chapitre (intégré au programme OU personnalisé) d'un exercice.
-// Les identifiants Firestore des chapitres personnalisés sont des chaînes
+// Retrouve le thème (intégré au programme OU personnalisé) d'un exercice.
+// Les identifiants Firestore des thèmes personnalisés sont des chaînes
 // alphanumériques (jamais "1" à "4"), donc pas d'ambiguïté possible.
-function findChapitrePourExercice(ex){
-  const builtIn = CHAPITRES.find(c=>c.id===Number(ex.ChapitreID));
+function findThemePourExercice(ex){
+  const builtIn = THEMES.find(c=>c.id===Number(ex.ThemeID));
   if(builtIn) return builtIn;
-  const custom = CUSTOM_CHAPITRES_CACHE.find(c=>c.ID===ex.ChapitreID);
-  if(custom) return { id:'custom-chap-'+custom.ID, customId:custom.ID, nom:custom.Nom, themes:[],
+  const custom = CUSTOM_THEMES_CACHE.find(c=>c.ID===ex.ThemeID);
+  if(custom) return { id:'custom-chap-'+custom.ID, customId:custom.ID, nom:custom.Nom, lecons:[],
     reference:{ but:'', regleSpeciale:{} } };
-  return CHAPITRES[0];
+  return THEMES[0];
 }
 
 // Convertit un document "exercice personnalisé" Firestore dans la même
-// forme {chapitre, theme} que les thèmes intégrés, pour pouvoir réutiliser
+// forme {thème, theme} que les leçons intégrés, pour pouvoir réutiliser
 // telles quelles toutes les fonctions d'affichage et de score existantes.
-function customExerciceToThemeShape(ex){
-  const chapitreBase = findChapitrePourExercice(ex);
+function customExerciceToLeconShape(ex){
+  const themeBase = findThemePourExercice(ex);
   const vide = { niveaux:[], but:'—', amenagement:'—', consignes:'—', criteres:'—',
     variables:{moins:'—', plus:'—'}, diagram:'full' };
   const contenu = {
@@ -725,24 +750,24 @@ function customExerciceToThemeShape(ex){
   let scoreExtra = {};
   try{ scoreExtra = ex.ScoreModeConfig ? JSON.parse(ex.ScoreModeConfig) : {}; }catch(e){ scoreExtra = {}; }
 
-  const theme = {
+  const lecon = {
     id: 'custom-'+ex.ID,
     nom: ex.Nom + ' (exercice personnalisé)',
     sa1: ex.Type==='decontextualisee' ? contenu : vide,
     sa2: ex.Type==='match' ? Object.assign({}, contenu, { scoreMode: ex.ScoreMode || 'direct' }, scoreExtra) : vide
   };
-  return { chapitre: chapitreBase, theme };
+  return { theme: themeBase, lecon };
 }
 
-// Convertit un document "thème personnalisé complet" Firestore (collection
-// themesPersonnalises) dans la même forme {chapitre, theme} que les 13
-// thèmes intégrés — MAIS avec les 3 situations réellement présentes (match
-// à thème, décontextualisée, référence), contrairement à un simple exercice
-// personnalisé qui n'en a qu'une. Réutilise findChapitrePourExercice() pour
-// se raccrocher à un chapitre intégré ou personnalisé existant.
-function themePersonaliseToThemeShape(doc){
-  const chapitreBase = findChapitrePourExercice({ ChapitreID: doc.ChapitreID });
-  const themeId = 'theme-perso-'+doc.ID;
+// Convertit un document "leçon personnalisé complet" Firestore (collection
+// leconsPersonnalises) dans la même forme {thème, theme} que les 13
+// leçons intégrés — MAIS avec les 3 situations réellement présentes (match
+// à leçon, décontextualisée, référence), contrairement à un simple exercice
+// personnalisé qui n'en a qu'une. Réutilise findThemePourExercice() pour
+// se raccrocher à un thème intégré ou personnalisé existant.
+function leconPersonaliseToLeconShape(doc){
+  const themeBase = findThemePourExercice({ ThemeID: doc.ThemeID });
+  const leconId = 'lecon-perso-'+doc.ID;
   const vide = { niveaux:[], but:'—', amenagement:'—', consignes:'—', criteres:'—',
     variables:{moins:'—', plus:'—'}, diagram:'full', objectifCroise:'' };
 
@@ -769,16 +794,16 @@ function themePersonaliseToThemeShape(doc){
     objectifCroise: doc.ObjectifCroise2||''
   }, scoreExtra) : vide;
 
-  const chapitre = Object.assign({}, chapitreBase, {
-    reference: Object.assign({}, chapitreBase.reference, {
-      but: doc.ButReference || chapitreBase.reference.but || '',
-      regleSpeciale: Object.assign({}, chapitreBase.reference.regleSpeciale||{}, { [themeId]: doc.RegleSpeciale||'' }),
-      imageDataRef: doc.ImageDataRef || chapitreBase.reference.imageDataRef
+  const theme = Object.assign({}, themeBase, {
+    reference: Object.assign({}, themeBase.reference, {
+      but: doc.ButReference || themeBase.reference.but || '',
+      regleSpeciale: Object.assign({}, themeBase.reference.regleSpeciale||{}, { [leconId]: doc.RegleSpeciale||'' }),
+      imageDataRef: doc.ImageDataRef || themeBase.reference.imageDataRef
     })
   });
 
-  const theme = { id: themeId, nom: doc.Nom || '(thème personnalisé sans nom)', sa1, sa2 };
-  return { chapitre, theme };
+  const lecon = { id: leconId, nom: doc.Nom || '(leçon personnalisé sans nom)', sa1, sa2 };
+  return { theme, lecon };
 }
 
 /* ============================================================
@@ -904,9 +929,9 @@ async function getSeances(){
   return snap.docs.map(d=>({ ID:d.id, ...d.data() }));
 }
 
-async function createSeance(date, chapitreId, themeId, titre, numero, carnetActif, evaluationFinale){
+async function createSeance(date, themeId, leconId, titre, numero, carnetActif, evaluationFinale){
   const ref = await db.collection('seances').add({
-    Date: date, ChapitreID: chapitreId, ThemeID: String(themeId), Titre: titre, Numero: Number(numero),
+    Date: date, ThemeID: themeId, LeconID: String(leconId), Titre: titre, Numero: Number(numero),
     CarnetActif: !!carnetActif, EvaluationFinale: !!evaluationFinale
   });
   return { id: ref.id };
@@ -962,34 +987,64 @@ async function deleteExerciceCustom(id){
 }
 
 // ------------------------------------------------------------
-// CHAPITRES PERSONNALISÉS (pour organiser des exercices en dehors
-// des 4 chapitres du programme d'origine)
+// LEÇONS PERSONNALISÉES (pour organiser des exercices en dehors
+// des 4 thèmes du programme d'origine)
 // ------------------------------------------------------------
-async function getChapitresCustom(){
-  const snap = await db.collection('chapitresCustom').get();
+// Palette proposée par défaut pour un nouveau thème personnalisé —
+// distincte des 4 couleurs des thèmes intégrés et des couleurs de
+// phase (vert/jaune/orange/bleu) déjà utilisées ailleurs dans l'appli.
+const PALETTE_THEME_CUSTOM = ['#f59f00','#37b24d','#1098ad','#e64980','#495057','#5c940d'];
+function couleurThemeCustomParDefaut(){
+  const n = (CUSTOM_THEMES_CACHE ? CUSTOM_THEMES_CACHE.length : 0);
+  return PALETTE_THEME_CUSTOM[n % PALETTE_THEME_CUSTOM.length];
+}
+
+async function getThemesCustom(){
+  const snap = await db.collection('themesCustom').get();
   return snap.docs.map(d=>({ ID:d.id, ...d.data() }));
 }
 
-async function createChapitreCustom(nom){
-  await db.collection('chapitresCustom').add({ Nom: nom });
+async function createThemeCustom(nom, couleur){
+  await db.collection('themesCustom').add({ Nom: nom, Couleur: couleur || couleurThemeCustomParDefaut() });
   return true;
 }
 
-async function updateChapitreCustom(id, nom){
-  await db.collection('chapitresCustom').doc(id).update({ Nom: nom });
+async function updateThemeCustom(id, nom, couleur){
+  const data = { Nom: nom };
+  if(couleur) data.Couleur = couleur;
+  await db.collection('themesCustom').doc(id).update(data);
   return true;
 }
 
-async function deleteChapitreCustom(id){
-  await db.collection('chapitresCustom').doc(id).delete();
+async function deleteThemeCustom(id){
+  await db.collection('themesCustom').doc(id).delete();
   return true;
 }
 
 // ------------------------------------------------------------
-// SURCHARGES DES THÈMES INTÉGRÉS (permettent de modifier le texte,
-// les critères, l'image et le compteur des 13 thèmes du programme
-// d'origine, sans toucher au code — un document par thème modifié,
+// SURCHARGES DES LEÇONS INTÉGRÉS (permettent de modifier le texte,
+// les critères, l'image et le compteur des 13 leçons du programme
+// d'origine, sans toucher au code — un document par leçon modifié,
 // fusionné par-dessus la version d'origine au moment de l'affichage)
+// ------------------------------------------------------------
+async function getLeconOverrides(){
+  const snap = await db.collection('leconOverrides').get();
+  return snap.docs.map(d=>({ ID:d.id, ...d.data() }));
+}
+
+async function saveLeconOverride(leconId, data){
+  await db.collection('leconOverrides').doc(leconId).set(data, { merge:true });
+  return true;
+}
+
+async function resetLeconOverride(leconId){
+  await db.collection('leconOverrides').doc(leconId).delete();
+  return true;
+}
+
+// ------------------------------------------------------------
+// SURCHARGES DES THÈMES INTÉGRÉS (renommer / masquer un thème
+// du programme d'origine sans toucher au code)
 // ------------------------------------------------------------
 async function getThemeOverrides(){
   const snap = await db.collection('themeOverrides').get();
@@ -997,26 +1052,7 @@ async function getThemeOverrides(){
 }
 
 async function saveThemeOverride(themeId, data){
-  await db.collection('themeOverrides').doc(themeId).set(data, { merge:true });
-  return true;
-}
-
-async function resetThemeOverride(themeId){
-  await db.collection('themeOverrides').doc(themeId).delete();
-  return true;
-}
-
-// ------------------------------------------------------------
-// SURCHARGES DES CHAPITRES INTÉGRÉS (renommer / masquer un chapitre
-// du programme d'origine sans toucher au code)
-// ------------------------------------------------------------
-async function getChapitreOverrides(){
-  const snap = await db.collection('chapitreOverrides').get();
-  return snap.docs.map(d=>({ ID:d.id, ...d.data() }));
-}
-
-async function saveChapitreOverride(chapitreId, data){
-  await db.collection('chapitreOverrides').doc(String(chapitreId)).set(data, { merge:true });
+  await db.collection('themeOverrides').doc(String(themeId)).set(data, { merge:true });
   return true;
 }
 
@@ -1046,28 +1082,28 @@ async function deleteTechnique(id){
 }
 
 // ------------------------------------------------------------
-// THÈMES PERSONNALISÉS COMPLETS (créés par l'enseignant, avec les
+// LEÇONS PERSONNALISÉS COMPLETS (créés par l'enseignant, avec les
 // 3 situations habituelles — match à thème + décontextualisée +
-// référence — au même niveau qu'un thème intégré du programme,
+// référence — au même niveau qu'un leçon intégré du programme,
 // contrairement à un simple exercice personnalisé qui n'en a qu'une)
 // ------------------------------------------------------------
-async function getThemesPersonnalises(){
-  const snap = await db.collection('themesPersonnalises').get();
+async function getLeconsPersonnalises(){
+  const snap = await db.collection('leconsPersonnalises').get();
   return snap.docs.map(d=>({ ID:d.id, ...d.data() }));
 }
 
-async function createThemePersonnalise(data){
-  await db.collection('themesPersonnalises').add(data);
+async function createLeconPersonnalise(data){
+  await db.collection('leconsPersonnalises').add(data);
   return true;
 }
 
-async function updateThemePersonnalise(id, data){
-  await db.collection('themesPersonnalises').doc(id).update(data);
+async function updateLeconPersonnalise(id, data){
+  await db.collection('leconsPersonnalises').doc(id).update(data);
   return true;
 }
 
-async function deleteThemePersonnalise(id){
-  await db.collection('themesPersonnalises').doc(id).delete();
+async function deleteLeconPersonnalise(id){
+  await db.collection('leconsPersonnalises').doc(id).delete();
   return true;
 }
 
@@ -1075,7 +1111,7 @@ async function deleteThemePersonnalise(id){
 // CARNET D'ENTRAÎNEMENT (AFL2) — une entrée par élève et par séance
 // où l'enseignant a activé "Mon carnet". Contient le bilan de
 // l'objectif précédent (facultatif) et le nouvel objectif choisi
-// (ObjectifThemeID) qui sera utilisé comme "objectif actif" de
+// (ObjectifLeconID) qui sera utilisé comme "objectif actif" de
 // l'élève tant qu'il n'en fixe pas un nouveau.
 // ------------------------------------------------------------
 async function getCarnetEntriesPourEleves(eleveIds){
@@ -1124,7 +1160,7 @@ async function getTempsMortsAll(){
 async function saveResultat(resultat){
   await db.collection('resultats').add({
     SeanceID: resultat.seanceId, EleveID: resultat.eleveId, PouleLabel: resultat.pouleLabel || '',
-    ThemeID: String(resultat.themeId), Phase: resultat.phase, Niveau: resultat.niveau || '',
+    LeconID: String(resultat.leconId), Phase: resultat.phase, Niveau: resultat.niveau || '',
     Detail: resultat.detail || '', Score: String(resultat.score ?? ''), ObjectifAtteint: resultat.objectifAtteint || '',
     Victoire: resultat.victoire || '',
     Horodatage: new Date().toISOString()
@@ -1207,9 +1243,9 @@ async function declarePoule(monCode, autresCodesTxt, numeroSeance){
     return { success:false, message:"Numéro de séance inconnu. Vérifiez auprès de votre enseignant." };
   }
 
-  const found = findTheme(seance.ThemeID);
+  const found = findLecon(seance.LeconID);
   if(!found){
-    return { success:false, message:"Thème introuvable pour cette séance." };
+    return { success:false, message:"Leçon introuvable pour cette séance." };
   }
 
   const pouleLabel = membres.map(m=>m.id).sort().join('-');
@@ -1218,8 +1254,8 @@ async function declarePoule(monCode, autresCodesTxt, numeroSeance){
     success:true,
     eleve: moi || membres[0],
     seance,
-    chapitre: found.chapitre,
     theme: found.theme,
+    lecon: found.lecon,
     poule: { id: pouleLabel, nom: membres.map(m=>m.nom).join(' / '), membres }
   };
 }
@@ -1250,14 +1286,14 @@ function showToast(msg){
 /* ============================================================
    AUTH ÉLÈVE
    ============================================================ */
-let CURRENT_ELEVE = null, CURRENT_SEANCE = null, CURRENT_POULE = null, CURRENT_CHAPITRE = null, CURRENT_THEME_ID = null;
+let CURRENT_ELEVE = null, CURRENT_SEANCE = null, CURRENT_POULE = null, CURRENT_THEME = null, CURRENT_LECON_ID = null;
 
 /* ============================================================
    AFL2 — "Mon carnet" : objectif personnel actif par élève
    ============================================================
-   OBJECTIFS_ACTIFS_CACHE[eleveId] = { themeId, seanceNumero } — le
+   OBJECTIFS_ACTIFS_CACHE[eleveId] = { leconId, seanceNumero } — le
    dernier objectif fixé par cet élève dans "Mon carnet", tous
-   thèmes/séances confondus. Chargé une fois par poule connectée
+   leçons/séances confondus. Chargé une fois par poule connectée
    (voir chargerObjectifsActifs), utilisé pour personnaliser le
    orange/jaune quand CURRENT_SEANCE.CarnetActif est vrai. */
 let OBJECTIFS_ACTIFS_CACHE = {};
@@ -1275,19 +1311,19 @@ function chargerObjectifsActifs(){
     });
     OBJECTIFS_ACTIFS_CACHE = {};
     Object.keys(parEleve).forEach(eleveId=>{
-      OBJECTIFS_ACTIFS_CACHE[eleveId] = { themeId: parEleve[eleveId].ObjectifThemeID, themeNom: parEleve[eleveId].ObjectifThemeNom };
+      OBJECTIFS_ACTIFS_CACHE[eleveId] = { leconId: parEleve[eleveId].ObjectifLeconID, leconNom: parEleve[eleveId].ObjectifLeconNom };
     });
     OBJECTIFS_ACTIFS_POULE_CHARGEE = CURRENT_POULE.id;
   }).catch(()=>{});
 }
 
-// Thème à utiliser pour le travail individuel (orange) d'un élève donné :
-// son objectif personnel actif s'il en a un, sinon le thème de secours de
+// Leçon à utiliser pour le travail individuel (orange) d'un élève donné :
+// son objectif personnel actif s'il en a un, sinon le leçon de secours de
 // la séance (celui choisi par l'enseignant à la création).
-function themeActifPourEleve(eleveId){
+function leconActifPourEleve(eleveId){
   const obj = OBJECTIFS_ACTIFS_CACHE[eleveId];
-  if(obj && obj.themeId && findTheme(obj.themeId)) return obj.themeId;
-  return CURRENT_SEANCE ? CURRENT_SEANCE.ThemeID : null;
+  if(obj && obj.leconId && findLecon(obj.leconId)) return obj.leconId;
+  return CURRENT_SEANCE ? CURRENT_SEANCE.LeconID : null;
 }
 
 const QUICK_ACCESS_KEY = 'bad_derniere_poule';
@@ -1313,7 +1349,7 @@ function getElevesConnus(){
 function sauvegarderSession(){
   try{
     localStorage.setItem(SESSION_KEY, JSON.stringify({
-      seance: CURRENT_SEANCE, poule: CURRENT_POULE, themeId: CURRENT_THEME_ID,
+      seance: CURRENT_SEANCE, poule: CURRENT_POULE, leconId: CURRENT_LECON_ID,
       phase: phaseActuelle, savedAt: new Date().toISOString()
     }));
   }catch(e){}
@@ -1344,13 +1380,13 @@ function renderReprisePossible(zoneId){
   if(!zone) return;
   let session;
   try{ session = JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); }catch(e){ session = null; }
-  if(!session || !session.seance || !session.poule || !session.themeId){ zone.innerHTML = ''; return; }
-  const found = findTheme(session.themeId);
-  const nomTheme = found ? found.theme.nom : session.themeId;
+  if(!session || !session.seance || !session.poule || !session.leconId){ zone.innerHTML = ''; return; }
+  const found = findLecon(session.leconId);
+  const nomLecon = found ? found.lecon.nom : session.leconId;
   const date = new Date(session.savedAt);
   zone.innerHTML = `<div class="card" style="border-color:var(--vert);">
     <label>📌 Séance en cours non terminée</label>
-    <p class="sub">${nomTheme} — Poule : ${session.poule.membres.map(m=>m.nom).join(', ')} (laissée le ${date.toLocaleDateString('fr-FR')} à ${date.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})})</p>
+    <p class="sub">${nomLecon} — Poule : ${session.poule.membres.map(m=>m.nom).join(', ')} (laissée le ${date.toLocaleDateString('fr-FR')} à ${date.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})})</p>
     <button class="btn" onclick="reprendreSession()">▶ Reprendre cette séance</button>
     <span class="link" style="margin-left:14px;" onclick="effacerSession(); renderReprisePossible('${zoneId||'reprise-session'}');">Oublier</span>
   </div>`;
@@ -1360,10 +1396,10 @@ function reprendreSession(){
   let session;
   try{ session = JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); }catch(e){ session = null; }
   if(!session) return;
-  const found = findTheme(session.themeId);
-  if(!found){ alert("Impossible de retrouver le thème de cette séance."); return; }
+  const found = findLecon(session.leconId);
+  if(!found){ alert("Impossible de retrouver le leçon de cette séance."); return; }
   CURRENT_SEANCE = session.seance; CURRENT_POULE = session.poule;
-  CURRENT_CHAPITRE = found.chapitre; CURRENT_THEME_ID = session.themeId;
+  CURRENT_THEME = found.theme; CURRENT_LECON_ID = session.leconId;
   CURRENT_ELEVE = session.poule.membres[0];
   phaseActuelle = session.phase || 'vert';
   scoresLive = {}; warmupLive = {}; warmupRecordsLoaded = false;
@@ -1640,29 +1676,29 @@ function chargerCarnetContenu(eleveId, dejaValide){
     const zone = document.getElementById('carnet-contenu');
     if(!zone) return; // l'élève a changé d'écran entre temps
     const stats = computeStats(rows);
-    const axes = Object.keys(stats.parChapitre).map(nom=>{
-      const d = stats.parChapitre[nom];
+    const axes = Object.keys(stats.parTheme).map(nom=>{
+      const d = stats.parTheme[nom];
       return { label: nom.replace(/^Chap\. \d+ — /,''), pct: d.withObj ? 100*d.reussis/d.withObj : 0, withObj: d.withObj };
     }).filter(a=>a.withObj>0);
 
     const objAvant = OBJECTIFS_ACTIFS_CACHE[eleveId];
     let bilanHtml = '';
-    if(objAvant && objAvant.themeId){
-      const found = findTheme(objAvant.themeId);
-      const nomTheme = found ? found.theme.nom : (objAvant.themeNom || objAvant.themeId);
-      const rowsTheme = rows.filter(r=>r.ThemeID===objAvant.themeId && (r.ObjectifAtteint==='oui'||r.ObjectifAtteint==='non'));
-      const reussisTheme = rowsTheme.filter(r=>r.ObjectifAtteint==='oui').length;
+    if(objAvant && objAvant.leconId){
+      const found = findLecon(objAvant.leconId);
+      const nomLecon = found ? found.lecon.nom : (objAvant.leconNom || objAvant.leconId);
+      const rowsLecon = rows.filter(r=>r.LeconID===objAvant.leconId && (r.ObjectifAtteint==='oui'||r.ObjectifAtteint==='non'));
+      const reussisLecon = rowsLecon.filter(r=>r.ObjectifAtteint==='oui').length;
       bilanHtml = `<div class="card" style="border-color:#7048e8;">
-        <p style="margin:0;"><strong>🎯 Ton objectif la dernière fois :</strong> ${nomTheme}</p>
-        <p class="sub" style="margin:6px 0 0;">${rowsTheme.length
-          ? `${reussisTheme}/${rowsTheme.length} contrats réussis depuis (${Math.round(100*reussisTheme/rowsTheme.length)}%)`
-          : "Pas encore de résultat enregistré sur ce thème depuis — pense à t'y entraîner avant de faire le bilan !"}</p>
+        <p style="margin:0;"><strong>🎯 Ton objectif la dernière fois :</strong> ${nomLecon}</p>
+        <p class="sub" style="margin:6px 0 0;">${rowsLecon.length
+          ? `${reussisLecon}/${rowsLecon.length} contrats réussis depuis (${Math.round(100*reussisLecon/rowsLecon.length)}%)`
+          : "Pas encore de résultat enregistré sur ce leçon depuis — pense à t'y entraîner avant de faire le bilan !"}</p>
       </div>`;
     }
 
     let radarHtml;
     if(axes.length < 3){
-      radarHtml = `<div class="card"><p class="sub">Pas encore assez de chapitres avec résultats pour tracer l'araignée (au moins 3 nécessaires). Choisis ton objectif au feeling pour cette fois !</p></div>`;
+      radarHtml = `<div class="card"><p class="sub">Pas encore assez de thèmes avec résultats pour tracer l'araignée (au moins 3 nécessaires). Choisis ton objectif au feeling pour cette fois !</p></div>`;
     } else {
       radarHtml = `<div class="card" style="text-align:center;">${radarChartSVG(axes, true)}
         <p class="sub" style="margin-top:8px;">🔴🟠 à travailler en priorité — 🟢🔵 points forts. À toi d'analyser et de choisir !</p>
@@ -1675,7 +1711,7 @@ function chargerCarnetContenu(eleveId, dejaValide){
     } else {
       formHtml = `<div class="card">
         <label>Mon prochain axe de travail</label>
-        <select id="carnet-objectif-theme">${objectifThemeOptionsHtml()}</select>
+        <select id="carnet-objectif-lecon">${objectifLeconOptionsHtml()}</select>
         <label>Ce que je retiens de cette séance (facultatif)</label>
         <textarea id="carnet-bilan-texte" rows="3" placeholder="Ex : j'ai bien progressé sur l'amorti, je continue / je change pour travailler le smash..."></textarea>
         <button class="btn" id="carnet-valider-btn" onclick="validerCarnetUI('${eleveId}')">✓ Valider mon objectif</button>
@@ -1687,48 +1723,48 @@ function chargerCarnetContenu(eleveId, dejaValide){
   }).catch(gsFail);
 }
 
-// Liste des thèmes disponibles pour fixer un objectif — thèmes intégrés
-// (non masqués) et thèmes personnalisés complets uniquement (pas les
+// Liste des leçons disponibles pour fixer un objectif — leçons intégrés
+// (non masqués) et leçons personnalisés complets uniquement (pas les
 // simples exercices personnalisés, qui n'ont qu'une seule situation).
-function objectifThemeOptionsHtml(){
-  let html = '<option value="">— Choisir un thème —</option>';
-  getChapitresAffiches().forEach(ch=>{
-    const themes = getThemesAffiches(ch.id);
-    const themesPerso = THEMES_PERSONNALISES_CACHE.filter(tp=>String(tp.ChapitreID)===String(ch.id));
-    if(!themes.length && !themesPerso.length) return;
+function objectifLeconOptionsHtml(){
+  let html = '<option value="">— Choisir un leçon —</option>';
+  getThemesAffiches().forEach(ch=>{
+    const lecons = getLeconsAffiches(ch.id);
+    const leconsPerso = LECONS_PERSONNALISES_CACHE.filter(tp=>String(tp.ThemeID)===String(ch.id));
+    if(!lecons.length && !leconsPerso.length) return;
     html += `<optgroup label="${ch.nom}">`;
-    themes.forEach(t=>{ html += `<option value="${t.id}">${t.nom}</option>`; });
-    themesPerso.forEach(tp=>{ html += `<option value="theme-perso-${tp.ID}">🧩 ${tp.Nom}</option>`; });
+    lecons.forEach(t=>{ html += `<option value="${t.id}">${t.nom}</option>`; });
+    leconsPerso.forEach(tp=>{ html += `<option value="lecon-perso-${tp.ID}">🧩 ${tp.Nom}</option>`; });
     html += `</optgroup>`;
   });
-  CUSTOM_CHAPITRES_CACHE.forEach(chCustom=>{
-    const themesPerso = THEMES_PERSONNALISES_CACHE.filter(tp=>tp.ChapitreID===chCustom.ID);
-    if(!themesPerso.length) return;
+  CUSTOM_THEMES_CACHE.forEach(chCustom=>{
+    const leconsPerso = LECONS_PERSONNALISES_CACHE.filter(tp=>tp.ThemeID===chCustom.ID);
+    if(!leconsPerso.length) return;
     html += `<optgroup label="📁 ${chCustom.Nom}">`;
-    themesPerso.forEach(tp=>{ html += `<option value="theme-perso-${tp.ID}">🧩 ${tp.Nom}</option>`; });
+    leconsPerso.forEach(tp=>{ html += `<option value="lecon-perso-${tp.ID}">🧩 ${tp.Nom}</option>`; });
     html += `</optgroup>`;
   });
   return html;
 }
 
 function validerCarnetUI(eleveId){
-  const themeSelect = document.getElementById('carnet-objectif-theme');
-  const themeId = themeSelect.value;
-  if(!themeId) return alert('Choisis un thème pour ton prochain objectif.');
-  const found = findTheme(themeId);
-  const nomTheme = found ? found.theme.nom : themeId;
+  const leconSelect = document.getElementById('carnet-objectif-lecon');
+  const leconId = leconSelect.value;
+  if(!leconId) return alert('Choisis un leçon pour ton prochain objectif.');
+  const found = findLecon(leconId);
+  const nomLecon = found ? found.lecon.nom : leconId;
   const bilan = document.getElementById('carnet-bilan-texte').value.trim();
   const btn = document.getElementById('carnet-valider-btn');
   btn.disabled = true; btn.innerText = '⏳ Enregistrement…';
   const nom = (CURRENT_POULE.membres.find(m=>m.id===eleveId)||{}).nom || '';
   saveCarnetEntry({
     SeanceID: CURRENT_SEANCE.ID, EleveID: eleveId, PouleLabel: CURRENT_POULE.id,
-    ObjectifThemeID: themeId, ObjectifThemeNom: nomTheme, Bilan: bilan,
+    ObjectifLeconID: leconId, ObjectifLeconNom: nomLecon, Bilan: bilan,
     Horodatage: new Date().toISOString()
   }).then(()=>{
-    OBJECTIFS_ACTIFS_CACHE[eleveId] = { themeId: themeId, themeNom: nomTheme };
+    OBJECTIFS_ACTIFS_CACHE[eleveId] = { leconId: leconId, leconNom: nomLecon };
     CARNET_VALIDE_POUR[eleveId+'_'+CURRENT_SEANCE.ID] = true;
-    showToast('✅ Objectif enregistré : '+nomTheme+' — '+nom);
+    showToast('✅ Objectif enregistré : '+nomLecon+' — '+nom);
     renderCarnet();
   }).catch(e=>{ btn.disabled=false; btn.innerText='✓ Valider mon objectif'; gsFail(e); });
 }
@@ -1765,12 +1801,12 @@ function afficherStatsEleve(eleveId){
     rows = rows || [];
     if(!rows.length){ c.innerHTML = '<div class="card"><p class="sub">Aucun résultat enregistré pour le moment.</p></div>'; return; }
     let html = statsBlockHtml(rows, 'var(--vert)', 'objectifs atteints (matchs gagnés + contrats validés)');
-    html += '<h2 style="margin:16px 0 6px;">Détail des résultats</h2><table><tr><th>Date</th><th>Thème</th><th>Phase</th><th>Détail</th><th>Résultat</th></tr>';
+    html += '<h2 style="margin:16px 0 6px;">Détail des résultats</h2><table><tr><th>Date</th><th>Leçon</th><th>Phase</th><th>Détail</th><th>Résultat</th></tr>';
     rows.sort((a,b)=> new Date(b.DateSeance) - new Date(a.DateSeance));
     rows.forEach(r=>{
-      const t = findTheme(r.ThemeID);
-      const nomTheme = t ? t.theme.nom : (r.ThemeID==='echauffement'?'Échauffement':r.ThemeID);
-      html += `<tr><td>${r.DateSeance||'—'}</td><td>${nomTheme}</td><td>${r.Phase}</td><td>${r.Detail||''}</td><td>${resultatBadge(r)}</td></tr>`;
+      const t = findLecon(r.LeconID);
+      const nomLecon = t ? t.lecon.nom : (r.LeconID==='echauffement'?'Échauffement':r.LeconID);
+      html += `<tr><td>${r.DateSeance||'—'}</td><td>${nomLecon}</td><td>${r.Phase}</td><td>${r.Detail||''}</td><td>${resultatBadge(r)}</td></tr>`;
     });
     html += '</table>';
     c.innerHTML = `<div class="card">${html}</div>`;
@@ -1803,7 +1839,7 @@ function doStudentLogin(){
     if(!res.success){ msg.innerHTML = '<div class="msg err">'+res.message+'</div>'; return; }
     msg.innerHTML='';
     CURRENT_ELEVE = res.eleve; CURRENT_SEANCE = res.seance; CURRENT_POULE = res.poule;
-    CURRENT_CHAPITRE = res.chapitre; CURRENT_THEME_ID = res.theme.id;
+    CURRENT_THEME = res.theme; CURRENT_LECON_ID = res.lecon.id;
     // Mémorise la composition (id inclus, pour l'onglet Statistiques) en
     // cumulant avec les élèves déjà connus sur cet ordinateur, sans doublon.
     // On dédoublonne par CODE (toujours présent), plus fiable qu'un id qui
@@ -1862,7 +1898,7 @@ function renderEleveApp(){
 
 function logoutEleve(){
   effacerSession();
-  CURRENT_ELEVE=null; CURRENT_SEANCE=null; CURRENT_POULE=null; CURRENT_CHAPITRE=null; CURRENT_THEME_ID=null;
+  CURRENT_ELEVE=null; CURRENT_SEANCE=null; CURRENT_POULE=null; CURRENT_THEME=null; CURRENT_LECON_ID=null;
   OBJECTIFS_ACTIFS_CACHE = {}; OBJECTIFS_ACTIFS_POULE_CHARGEE = null;
   CARNET_ELEVE_SELECTIONNE = null; CARNET_VALIDE_POUR = {}; ORANGE_PERSO_ELEVE = null;
   CLASSEMENT_POULE_CACHE = null; TEMPS_MORTS_CACHE = null;
@@ -1875,7 +1911,7 @@ function logoutEleve(){
 
 function renderLeconEleve(){
   const el = document.getElementById('screen-eleve');
-  const {chapitre, theme} = findTheme(CURRENT_THEME_ID);
+  const {theme, lecon} = findLecon(CURRENT_LECON_ID);
   const membres = CURRENT_POULE.membres.map(m=>m.nom).join(', ');
   sauvegarderSession();
 
@@ -1887,7 +1923,7 @@ function renderLeconEleve(){
     chargerObjectifsActifs().then(()=>{
       if(phaseActuelle==='orange' && !document.getElementById('screen-eleve').classList.contains('hidden')){
         const content = document.getElementById('phase-content');
-        if(content) content.innerHTML = renderOrange(chapitre, theme);
+        if(content) content.innerHTML = renderOrange(theme, lecon);
       }
     });
   }
@@ -1900,7 +1936,7 @@ function renderLeconEleve(){
       ${CURRENT_SEANCE.CarnetActif ? `<p class="link" onclick="ouvrirOngletCarnet()">📓 Mon carnet</p>` : ''}
       <p class="link" onclick="renderMaProgression()">Ma progression &rarr;</p>
     </div>
-    <h1>${CURRENT_SEANCE.EvaluationFinale ? "🎓 Évaluation finale" : theme.nom}</h1>
+    <h1>${CURRENT_SEANCE.EvaluationFinale ? "🎓 Évaluation finale" : lecon.nom}</h1>
     <div class="sub">Poule : ${membres}${CURRENT_SEANCE.CarnetActif ? ' · <span style="color:#7048e8; font-weight:700;">📓 séance individualisée</span>' : ''}${CURRENT_SEANCE.EvaluationFinale ? ' · <span style="color:#e8590c; font-weight:700;">🎓 mode évaluation — pas de bonus</span>' : ''}</div>
     <div class="phase-nav">`;
   phasesActives.forEach(p=>{
@@ -1912,9 +1948,9 @@ function renderLeconEleve(){
 
   const content = document.getElementById('phase-content');
   if(phaseActuelle==='vert') content.innerHTML = renderVert();
-  if(phaseActuelle==='jaune') content.innerHTML = renderJaune(chapitre, theme);
-  if(phaseActuelle==='orange') content.innerHTML = renderOrange(chapitre, theme);
-  if(phaseActuelle==='bleu') content.innerHTML = renderBleu(chapitre, theme);
+  if(phaseActuelle==='jaune') content.innerHTML = renderJaune(theme, lecon);
+  if(phaseActuelle==='orange') content.innerHTML = renderOrange(theme, lecon);
+  if(phaseActuelle==='bleu') content.innerHTML = renderBleu(theme, lecon);
 }
 
 const WARMUP_ETAPES = [
@@ -2046,7 +2082,7 @@ function warmupSaveRecord(key){
   // défi d'échauffement se fait en binôme/à plusieurs, pas individuellement.
   const promises = membres.map(mem => saveResultat({
     seanceId: CURRENT_SEANCE ? CURRENT_SEANCE.ID : '', eleveId: mem.id,
-    pouleLabel: CURRENT_POULE ? CURRENT_POULE.id : '', themeId: 'echauffement',
+    pouleLabel: CURRENT_POULE ? CURRENT_POULE.id : '', leconId: 'echauffement',
     phase:'vert', niveau: key, detail: detailTxt,
     score: w.count, objectifAtteint: ''
   }));
@@ -2082,17 +2118,17 @@ function loadWarmupRecords(){
   }).catch(err=>console.warn('Chargement des records impossible (hors-ligne ?) :', err));
 }
 
-function renderJaune(chapitre, theme){
+function renderJaune(theme, lecon){
   if(CURRENT_SEANCE && CURRENT_SEANCE.EvaluationFinale){
     return renderJauneEvaluation();
   }
   if(CURRENT_SEANCE && CURRENT_SEANCE.CarnetActif){
     return renderJaunePersonnalise();
   }
-  const sa = theme.sa2;
+  const sa = lecon.sa2;
   return `<div class="banniere jaune">🟡 Match à thème <span class="tag">~30 min</span></div>
     ${ficheSA(sa, "Match à thème")}
-    ${renderScoreCard('jaune', theme.id)}`;
+    ${renderScoreCard('jaune', lecon.id)}`;
 }
 
 /* ============================================================
@@ -2220,10 +2256,10 @@ function finaliserMatchEvaluation_(){
   const detailCommun = `${m.a.nom} vs ${m.b.nom} — ${detailSets} (évaluation finale)`;
 
   const p1 = { seanceId: CURRENT_SEANCE.ID, eleveId: m.a.id, pouleLabel: CURRENT_POULE.id,
-    themeId: CURRENT_THEME_ID, phase: 'jaune', niveau: '',
+    leconId: CURRENT_LECON_ID, phase: 'jaune', niveau: '',
     detail: detailCommun, score: `${s.setsA}-${s.setsB} sets`, objectifAtteint: '', victoire: victoireA };
   const p2 = { seanceId: CURRENT_SEANCE.ID, eleveId: m.b.id, pouleLabel: CURRENT_POULE.id,
-    themeId: CURRENT_THEME_ID, phase: 'jaune', niveau: '',
+    leconId: CURRENT_LECON_ID, phase: 'jaune', niveau: '',
     detail: detailCommun, score: `${s.setsB}-${s.setsA} sets`, objectifAtteint: '', victoire: victoireB };
 
   Promise.all([saveResultat(p1), saveResultat(p2)]).then(()=>{
@@ -2239,7 +2275,7 @@ function finaliserMatchEvaluation_(){
    Un vrai match classique (+1/-1, terrain entier) entre deux membres
    de la poule, mais chacun poursuit SON propre objectif personnel en
    parallèle (déclaré manuellement en fin de match, comme pour un
-   essai en orange) — pas de thème unique imposé aux deux joueurs.
+   essai en orange) — pas de leçon unique imposé aux deux joueurs.
    ============================================================ */
 const JAUNE_PERSO_KEY = 'jaune_objectifs-croises';
 let CLASSEMENT_POULE_CACHE = null; // { seanceId, pouleId, rows }
@@ -2256,23 +2292,23 @@ function renderJaunePersonnalise(){
     ? `🧑‍⚖️ Arbitre : <strong>${m.arbitres.map(a=>a.nom).join(' et ')}</strong>`
     : `🧑‍⚖️ Pas d'arbitre disponible dans cette poule — comptez vos points vous-mêmes.`;
 
-  const themeIdA = themeActifPourEleve(m.a.id);
-  const themeIdB = themeActifPourEleve(m.b.id);
-  const foundA = themeIdA ? findTheme(themeIdA) : null;
-  const foundB = themeIdB ? findTheme(themeIdB) : null;
-  const secoursA = !(OBJECTIFS_ACTIFS_CACHE[m.a.id] && OBJECTIFS_ACTIFS_CACHE[m.a.id].themeId);
-  const secoursB = !(OBJECTIFS_ACTIFS_CACHE[m.b.id] && OBJECTIFS_ACTIFS_CACHE[m.b.id].themeId);
+  const leconIdA = leconActifPourEleve(m.a.id);
+  const leconIdB = leconActifPourEleve(m.b.id);
+  const foundA = leconIdA ? findLecon(leconIdA) : null;
+  const foundB = leconIdB ? findLecon(leconIdB) : null;
+  const secoursA = !(OBJECTIFS_ACTIFS_CACHE[m.a.id] && OBJECTIFS_ACTIFS_CACHE[m.a.id].leconId);
+  const secoursB = !(OBJECTIFS_ACTIFS_CACHE[m.b.id] && OBJECTIFS_ACTIFS_CACHE[m.b.id].leconId);
 
   const ficheJoueur = (nom, found, secours) => {
     if(!found) return `<div class="card" style="flex:1; min-width:220px;"><p class="sub">Objectif introuvable pour ${nom}.</p></div>`;
-    const sa2 = found.theme.sa2;
+    const sa2 = found.lecon.sa2;
     const consigneCroisee = (sa2.objectifCroise || '').trim();
     return `<div class="card" style="flex:1; min-width:220px;">
-      <p class="sub" style="margin:0 0 4px;">🎯 Objectif de <strong>${nom}</strong>${secours?' <span style="color:#e8590c;">(thème de secours)</span>':''}</p>
-      <p style="margin:0 0 6px; font-weight:700;">${found.theme.nom}</p>
+      <p class="sub" style="margin:0 0 4px;">🎯 Objectif de <strong>${nom}</strong>${secours?' <span style="color:#e8590c;">(leçon de secours)</span>':''}</p>
+      <p style="margin:0 0 6px; font-weight:700;">${found.lecon.nom}</p>
       ${consigneCroisee
         ? `<p class="sub" style="margin:0;"><strong>Consigne :</strong> ${consigneCroisee}</p>`
-        : `<p class="sub" style="margin:0; color:#e8590c;">Objectif pas encore défini pour ce thème en match croisé — demande à ton enseignant.</p>`}
+        : `<p class="sub" style="margin:0; color:#e8590c;">Objectif pas encore défini pour ce leçon en match croisé — demande à ton enseignant.</p>`}
     </div>`;
   };
 
@@ -2347,9 +2383,9 @@ function enregistrerJaunePerso(){
   const s = ensureJaunePersoState();
   if(s.locked) return;
   const { m } = currentMatchup('objectifs-croises', s.matchIndex);
-  const themeIdA = themeActifPourEleve(m.a.id);
-  const themeIdB = themeActifPourEleve(m.b.id);
-  if(!themeIdA || !themeIdB){ alert("Thème introuvable pour l'un des deux joueurs — vérifiez la configuration de la séance."); return; }
+  const leconIdA = leconActifPourEleve(m.a.id);
+  const leconIdB = leconActifPourEleve(m.b.id);
+  if(!leconIdA || !leconIdB){ alert("Leçon introuvable pour l'un des deux joueurs — vérifiez la configuration de la séance."); return; }
 
   const objA = document.getElementById('jaune-perso-obj-a').value;
   const objB = document.getElementById('jaune-perso-obj-b').value;
@@ -2363,11 +2399,11 @@ function enregistrerJaunePerso(){
   const detailCommun = `${m.a.nom}: ${s.a} / ${m.b.nom}: ${s.b} (objectifs croisés)`;
 
   const p1 = { seanceId: CURRENT_SEANCE.ID, eleveId: m.a.id, pouleLabel: CURRENT_POULE.id,
-    themeId: themeIdA, phase: 'jaune', niveau: '',
+    leconId: leconIdA, phase: 'jaune', niveau: '',
     detail: `${detailCommun}. Objectif de ${m.a.nom} : ${objA==='oui'?'atteint':(objA==='non'?'non atteint':'non renseigné')}`,
     score: `${s.a}-${s.b}`, objectifAtteint: objA, victoire: victoireA };
   const p2 = { seanceId: CURRENT_SEANCE.ID, eleveId: m.b.id, pouleLabel: CURRENT_POULE.id,
-    themeId: themeIdB, phase: 'jaune', niveau: '',
+    leconId: leconIdB, phase: 'jaune', niveau: '',
     detail: `${detailCommun}. Objectif de ${m.b.nom} : ${objB==='oui'?'atteint':(objB==='non'?'non atteint':'non renseigné')}`,
     score: `${s.b}-${s.a}`, objectifAtteint: objB, victoire: victoireB };
 
@@ -2426,18 +2462,18 @@ function changerOrangePersoEleve(){
   renderLeconEleve();
 }
 
-function renderOrange(chapitre, theme){
+function renderOrange(theme, lecon){
   if(CURRENT_SEANCE && CURRENT_SEANCE.CarnetActif){
     return renderOrangePersonnalise();
   }
-  const sa = theme.sa1;
+  const sa = lecon.sa1;
   return `<div class="banniere orange">🟠 Situation décontextualisée <span class="tag">~20 min</span></div>
     ${ficheSA(sa, "Situation décontextualisée")}
-    ${compteurContrats('orange', theme.id)}`;
+    ${compteurContrats('orange', lecon.id)}`;
 }
 
 // Version individualisée : chaque élève de la poule travaille sur son
-// propre objectif (celui fixé dans "Mon carnet"), ou sur le thème de
+// propre objectif (celui fixé dans "Mon carnet"), ou sur le leçon de
 // secours de la séance s'il n'en a pas encore fixé un.
 function renderOrangePersonnalise(){
   if(!ORANGE_PERSO_ELEVE || !CURRENT_POULE.membres.some(m=>m.id===ORANGE_PERSO_ELEVE)){
@@ -2445,17 +2481,17 @@ function renderOrangePersonnalise(){
   }
   const eleveId = ORANGE_PERSO_ELEVE;
   const nom = (CURRENT_POULE.membres.find(m=>m.id===eleveId)||{}).nom || '';
-  const themeId = themeActifPourEleve(eleveId);
-  const found = themeId ? findTheme(themeId) : null;
-  const surSecours = !(OBJECTIFS_ACTIFS_CACHE[eleveId] && OBJECTIFS_ACTIFS_CACHE[eleveId].themeId);
+  const leconId = leconActifPourEleve(eleveId);
+  const found = leconId ? findLecon(leconId) : null;
+  const surSecours = !(OBJECTIFS_ACTIFS_CACHE[eleveId] && OBJECTIFS_ACTIFS_CACHE[eleveId].leconId);
 
   let corps;
   if(!found){
-    corps = `<div class="card"><p class="sub">Thème introuvable — vérifiez la configuration de la séance.</p></div>`;
+    corps = `<div class="card"><p class="sub">Leçon introuvable — vérifiez la configuration de la séance.</p></div>`;
   } else {
-    corps = `${surSecours ? `<div class="msg" style="background:#fff4e6; color:#e8590c;">Pas encore d'objectif personnel fixé pour ${nom} — thème de secours de la séance utilisé.</div>` : ''}
-      ${ficheSA(found.theme.sa1, "Situation décontextualisée — objectif de "+nom)}
-      ${compteurContrats('orange', found.theme.id, eleveId)}`;
+    corps = `${surSecours ? `<div class="msg" style="background:#fff4e6; color:#e8590c;">Pas encore d'objectif personnel fixé pour ${nom} — leçon de secours de la séance utilisé.</div>` : ''}
+      ${ficheSA(found.lecon.sa1, "Situation décontextualisée — objectif de "+nom)}
+      ${compteurContrats('orange', found.lecon.id, eleveId)}`;
   }
 
   return `<div class="banniere orange">🟠 Situation décontextualisée — entraînement individualisé <span class="tag">~20 min</span></div>
@@ -2468,20 +2504,20 @@ function renderOrangePersonnalise(){
     ${corps}`;
 }
 
-function renderBleu(chapitre, theme){
-  const regle = chapitre.reference.regleSpeciale[theme.id];
-  const diagKind = chapitre.reference.diagram ? chapitre.reference.diagram[theme.id] : 'full';
-  const diagramHtml = chapitre.reference.imageDataRef
-    ? `<div class="diagram-wrap"><img src="${chapitre.reference.imageDataRef}" style="max-width:100%; border-radius:8px; display:block; margin:0 auto;" alt="Schéma de la situation de référence"></div>`
+function renderBleu(theme, lecon){
+  const regle = theme.reference.regleSpeciale[lecon.id];
+  const diagKind = theme.reference.diagram ? theme.reference.diagram[lecon.id] : 'full';
+  const diagramHtml = theme.reference.imageDataRef
+    ? `<div class="diagram-wrap"><img src="${theme.reference.imageDataRef}" style="max-width:100%; border-radius:8px; display:block; margin:0 auto;" alt="Schéma de la situation de référence"></div>`
     : courtDiagram(diagKind);
   return `<div class="banniere bleu">🔵 Situation de référence <span class="tag">~30 min</span></div>
     <table class="fiche-table">
       <tr><th class="bar" colspan="2">Situation de référence</th></tr>
-      <tr><td class="label">But</td><td>${chapitre.reference.but}</td></tr>
+      <tr><td class="label">But</td><td>${theme.reference.but}</td></tr>
       <tr><td class="label">Règle spéciale du jour</td><td>${regle}</td></tr>
     </table>
     ${diagramHtml}
-    ${renderScoreCard('bleu', theme.id)}
+    ${renderScoreCard('bleu', lecon.id)}
     ${tempsMortHtml()}`;
 }
 
@@ -2571,12 +2607,12 @@ function ficheSA(sa, titre){
    MOTEUR DE SCORE — s'adapte au mode de la situation
    (direct / bareme / mortSubite / rallyCount / servicePoints)
    ============================================================ */
-function scoreKey(phase, themeId){ return phase+'_'+themeId; }
+function scoreKey(phase, leconId){ return phase+'_'+leconId; }
 
-function getScoreCfg(phase, themeId){
-  const {chapitre, theme} = findTheme(themeId);
+function getScoreCfg(phase, leconId){
+  const {theme, lecon} = findLecon(leconId);
   if(phase === 'jaune'){
-    const sa = theme.sa2;
+    const sa = lecon.sa2;
     return { mode: sa.scoreMode || 'direct', bonus2x: !!sa.bonus2x, bonusValeur: sa.bonusValeur,
       uniteScore: sa.uniteScore, cibleScore: sa.cibleScore,
       bareme: sa.bareme, mortSubite: sa.mortSubite, rallyCount: sa.rallyCount, servicePoints: sa.servicePoints,
@@ -2584,14 +2620,14 @@ function getScoreCfg(phase, themeId){
   }
   // bleu (situation de référence) : pas de critère de réussite oui/non — on
   // affiche un code couleur basé sur le % de victoires (voir referenceStatsHtml).
-  const ref = chapitre.reference;
-  const mode = (ref.scoreMode && ref.scoreMode[theme.id]) || 'direct';
-  return { mode, bonus2x: ref.bonus2x ? !!ref.bonus2x[theme.id] : false,
-    mortSubite: ref.mortSubite ? ref.mortSubite[theme.id] : null };
+  const ref = theme.reference;
+  const mode = (ref.scoreMode && ref.scoreMode[lecon.id]) || 'direct';
+  return { mode, bonus2x: ref.bonus2x ? !!ref.bonus2x[lecon.id] : false,
+    mortSubite: ref.mortSubite ? ref.mortSubite[lecon.id] : null };
 }
 
-function ensureScoreState(phase, themeId){
-  const key = scoreKey(phase, themeId);
+function ensureScoreState(phase, leconId){
+  const key = scoreKey(phase, leconId);
   if(!scoresLive[key]){
     scoresLive[key] = { matchIndex:0, locked:false, a:0, b:0, total:0, servicesDone:0 };
   }
@@ -2600,11 +2636,11 @@ function ensureScoreState(phase, themeId){
 
 // Seuil de réussite global utilisé pour tous les critères en pourcentage
 // (matchs à thème et situation décontextualisée) : au moins 66% des
-// contrats individuels réussis pour considérer le critère du thème atteint.
+// contrats individuels réussis pour considérer le critère du leçon atteint.
 const SEUIL_REUSSITE = 0.66;
 
 // Évalue le "contrat" d'UN SEUL match/essai (règle simple, propre au
-// thème). Le résultat global du thème (%) est ensuite calculé en agrégeant
+// leçon). Le résultat global du leçon (%) est ensuite calculé en agrégeant
 // tous ces contrats individuels dans les statistiques (voir computeStats),
 // et non ici : on ne regarde jamais l'historique au moment de la saisie.
 function evaluerContratMatch(critere, donnees){
@@ -2627,15 +2663,15 @@ function evaluerContratMatch(critere, donnees){
   return '';
 }
 
-function currentMatchup(themeId, matchIndex){
+function currentMatchup(leconId, matchIndex){
   const matchups = generateMatchups(CURRENT_POULE.membres);
   return { matchups, m: matchups[matchIndex % matchups.length] };
 }
 
-function renderScoreCard(phase, themeId){
-  const cfg = getScoreCfg(phase, themeId);
-  const s = ensureScoreState(phase, themeId);
-  const { matchups, m } = currentMatchup(themeId, s.matchIndex);
+function renderScoreCard(phase, leconId){
+  const cfg = getScoreCfg(phase, leconId);
+  const s = ensureScoreState(phase, leconId);
+  const { matchups, m } = currentMatchup(leconId, s.matchIndex);
   const arbitreTxt = m.arbitres.length
     ? `🧑‍⚖️ Arbitre : <strong>${m.arbitres.map(a=>a.nom).join(' et ')}</strong>`
     : `🧑‍⚖️ Pas d'arbitre disponible dans cette poule — comptez vos points vous-mêmes.`;
@@ -2644,20 +2680,20 @@ function renderScoreCard(phase, themeId){
     <div class="arbitre-note">${arbitreTxt}</div>`;
 
   let body;
-  if(cfg.mode === 'bareme') body = baremeUI(phase, themeId, cfg, s, m);
-  else if(cfg.mode === 'mortSubite') body = mortSubiteUI(phase, themeId, cfg, s, m);
-  else if(cfg.mode === 'rallyCount') body = rallyCountUI(phase, themeId, cfg, s, m);
-  else if(cfg.mode === 'servicePoints') body = servicePointsUI(phase, themeId, cfg, s, m);
-  else body = directUI(phase, themeId, cfg, s, m);
+  if(cfg.mode === 'bareme') body = baremeUI(phase, leconId, cfg, s, m);
+  else if(cfg.mode === 'mortSubite') body = mortSubiteUI(phase, leconId, cfg, s, m);
+  else if(cfg.mode === 'rallyCount') body = rallyCountUI(phase, leconId, cfg, s, m);
+  else if(cfg.mode === 'servicePoints') body = servicePointsUI(phase, leconId, cfg, s, m);
+  else body = directUI(phase, leconId, cfg, s, m);
 
   return `<div class="card">${header}${body}</div>`;
 }
 
 /* ---------- Mode "direct" : score classique +1 (et +2 si bonus) ---------- */
-function directUI(phase, themeId, cfg, s, m){
+function directUI(phase, leconId, cfg, s, m){
   const bonusVal = cfg.bonusValeur || 2;
-  const bonusA = cfg.bonus2x ? `<button class="btn small secondary" ${s.locked?'disabled':''} onclick="incrScore('${phase}','${themeId}','a',${bonusVal})">+${bonusVal}</button>` : '';
-  const bonusB = cfg.bonus2x ? `<button class="btn small secondary" ${s.locked?'disabled':''} onclick="incrScore('${phase}','${themeId}','b',${bonusVal})">+${bonusVal}</button>` : '';
+  const bonusA = cfg.bonus2x ? `<button class="btn small secondary" ${s.locked?'disabled':''} onclick="incrScore('${phase}','${leconId}','a',${bonusVal})">+${bonusVal}</button>` : '';
+  const bonusB = cfg.bonus2x ? `<button class="btn small secondary" ${s.locked?'disabled':''} onclick="incrScore('${phase}','${leconId}','b',${bonusVal})">+${bonusVal}</button>` : '';
   const uniteLabel = cfg.uniteScore==='zone' ? 'zones' : 'points';
   const cibleTxt = cfg.cibleScore ? `<p class="sub" style="text-align:center;margin-top:-4px">Objectif : ${cfg.cibleScore} ${uniteLabel}</p>` : '';
   return `${cibleTxt}
@@ -2666,30 +2702,30 @@ function directUI(phase, themeId, cfg, s, m){
         <div class="nom">${m.a.nom}</div>
         <div class="val" id="score-a-${phase}">${s.a}</div>
         <div class="score-buttons">
-          <button class="btn small secondary" ${s.locked?'disabled':''} onclick="incrScore('${phase}','${themeId}','a',1)">+1</button>
+          <button class="btn small secondary" ${s.locked?'disabled':''} onclick="incrScore('${phase}','${leconId}','a',1)">+1</button>
           ${bonusA}
-          <button class="btn small secondary" ${s.locked?'disabled':''} onclick="incrScore('${phase}','${themeId}','a',-1)">-1</button>
+          <button class="btn small secondary" ${s.locked?'disabled':''} onclick="incrScore('${phase}','${leconId}','a',-1)">-1</button>
         </div>
       </div>
       <div class="score-card">
         <div class="nom">${m.b.nom}</div>
         <div class="val" id="score-b-${phase}">${s.b}</div>
         <div class="score-buttons">
-          <button class="btn small secondary" ${s.locked?'disabled':''} onclick="incrScore('${phase}','${themeId}','b',1)">+1</button>
+          <button class="btn small secondary" ${s.locked?'disabled':''} onclick="incrScore('${phase}','${leconId}','b',1)">+1</button>
           ${bonusB}
-          <button class="btn small secondary" ${s.locked?'disabled':''} onclick="incrScore('${phase}','${themeId}','b',-1)">-1</button>
+          <button class="btn small secondary" ${s.locked?'disabled':''} onclick="incrScore('${phase}','${leconId}','b',-1)">-1</button>
         </div>
       </div>
     </div>
     <div style="margin-top:14px; text-align:center;">
-      <button class="btn" id="btn-enregistrer-${phase}" ${s.locked?'disabled':''} onclick="enregistrerDirect('${phase}','${themeId}')">
+      <button class="btn" id="btn-enregistrer-${phase}" ${s.locked?'disabled':''} onclick="enregistrerDirect('${phase}','${leconId}')">
         ${s.locked ? '⏳ Enregistrement…' : '✓ Enregistrer ce résultat'}
       </button>
     </div>`;
 }
 
-function incrScore(phase, themeId, joueur, delta){
-  const key = scoreKey(phase, themeId);
+function incrScore(phase, leconId, joueur, delta){
+  const key = scoreKey(phase, leconId);
   if(scoresLive[key].locked) return;
   scoresLive[key][joueur] = Math.max(0, scoresLive[key][joueur] + delta);
   const el = document.getElementById('score-'+joueur+'-'+phase);
@@ -2699,13 +2735,13 @@ function incrScore(phase, themeId, joueur, delta){
 // Enregistre un résultat pour CHAQUE joueur du match (et non plus un seul),
 // pour que le joueur qui n'a pas cliqué "enregistrer" ait quand même son
 // propre résultat de tracé dans sa progression.
-function saveDualResultat(phase, themeId, m, scoreA, scoreB, detailA, detailB, extra){
+function saveDualResultat(phase, leconId, m, scoreA, scoreB, detailA, detailB, extra){
   extra = extra || {};
-  const cfg = getScoreCfg(phase, themeId);
+  const cfg = getScoreCfg(phase, leconId);
   const victoireA = scoreA>scoreB ? 'oui' : (scoreA<scoreB ? 'non' : '');
   const victoireB = scoreB>scoreA ? 'oui' : (scoreB<scoreA ? 'non' : '');
 
-  // Contrat individuel de CE match uniquement (règle propre au thème) —
+  // Contrat individuel de CE match uniquement (règle propre au leçon) —
   // le pourcentage global est calculé ensuite dans les statistiques.
   let objA = '', objB = '';
   if(cfg.critere && cfg.critere.type === 'ownScoreThreshold'){
@@ -2716,7 +2752,7 @@ function saveDualResultat(phase, themeId, m, scoreA, scoreB, detailA, detailB, e
     objB = evaluerContratMatch(cfg.critere, { gagne: victoireB==='oui', viaMortSubite: !!extra.viaMortSubite });
   }
 
-  const base = { seanceId: CURRENT_SEANCE.ID, pouleLabel: CURRENT_POULE.id, themeId: themeId, phase: phase, niveau:'' };
+  const base = { seanceId: CURRENT_SEANCE.ID, pouleLabel: CURRENT_POULE.id, leconId: leconId, phase: phase, niveau:'' };
   const p1 = Object.assign({}, base, { eleveId: m.a.id, score: scoreA, objectifAtteint: objA, victoire: victoireA,
     detail: detailA || `${m.a.nom}: ${scoreA} / ${m.b.nom}: ${scoreB}` });
   const p2 = Object.assign({}, base, { eleveId: m.b.id, score: scoreB, objectifAtteint: objB, victoire: victoireB,
@@ -2724,15 +2760,15 @@ function saveDualResultat(phase, themeId, m, scoreA, scoreB, detailA, detailB, e
   return Promise.all([saveResultat(p1), saveResultat(p2)]);
 }
 
-function enregistrerDirect(phase, themeId){
-  const key = scoreKey(phase, themeId);
+function enregistrerDirect(phase, leconId){
+  const key = scoreKey(phase, leconId);
   const s = scoresLive[key];
   if(s.locked) return;
   s.locked = true;
   const btn = document.getElementById('btn-enregistrer-'+phase);
   if(btn){ btn.disabled = true; btn.innerText = '⏳ Enregistrement…'; }
-  const { m } = currentMatchup(themeId, s.matchIndex);
-  saveDualResultat(phase, themeId, m, s.a, s.b).then(()=>{
+  const { m } = currentMatchup(leconId, s.matchIndex);
+  saveDualResultat(phase, leconId, m, s.a, s.b).then(()=>{
     s.a = 0; s.b = 0; s.matchIndex += 1; s.locked = false;
     showToast('✅ Résultat enregistré pour les deux joueurs — nouveau match !');
     renderLeconEleve();
@@ -2740,7 +2776,7 @@ function enregistrerDirect(phase, themeId){
     s.locked = false; gsFail(e); renderLeconEleve();
   });
 }
-function baremeUI(phase, themeId, cfg, s, m){
+function baremeUI(phase, leconId, cfg, s, m){
   const b = cfg.bareme;
   const rows = b.plotLabels.map((label,i)=>
     `<tr><td class="label">${label}</td><td>${b.gagne[i]} pts</td><td>${b.perdu[i]} pts</td></tr>`).join('');
@@ -2768,7 +2804,7 @@ function baremeUI(phase, themeId, cfg, s, m){
         <select id="bareme-plots-b-${phase}" onchange="checkBaremeReady('${phase}')">${plotOptions}</select></div>
     </div>
     <div style="text-align:center;margin-top:10px;">
-      <button class="btn" id="btn-enregistrer-${phase}" disabled onclick="enregistrerBareme('${phase}','${themeId}')">
+      <button class="btn" id="btn-enregistrer-${phase}" disabled onclick="enregistrerBareme('${phase}','${leconId}')">
         ${s.locked ? '⏳ Enregistrement…' : '✓ Enregistrer ce résultat'}
       </button>
       <p class="sub" id="bareme-hint-${phase}">Remplissez les 3 champs ci-dessus pour activer l'enregistrement.</p>
@@ -2786,13 +2822,13 @@ function checkBaremeReady(phase){
   hint.style.display = ready ? 'none' : 'block';
 }
 
-function enregistrerBareme(phase, themeId){
-  const key = scoreKey(phase, themeId);
+function enregistrerBareme(phase, leconId){
+  const key = scoreKey(phase, leconId);
   const s = scoresLive[key];
   if(s.locked) return;
-  const cfg = getScoreCfg(phase, themeId);
+  const cfg = getScoreCfg(phase, leconId);
   const b = cfg.bareme;
-  const { m } = currentMatchup(themeId, s.matchIndex);
+  const { m } = currentMatchup(leconId, s.matchIndex);
   const gagnant = document.getElementById('bareme-gagnant-'+phase).value;
   const plotsA = Number(document.getElementById('bareme-plots-a-'+phase).value);
   const plotsB = Number(document.getElementById('bareme-plots-b-'+phase).value);
@@ -2806,11 +2842,11 @@ function enregistrerBareme(phase, themeId){
   if(btn){ btn.disabled = true; btn.innerText = '⏳ Enregistrement…'; }
 
   // Contrat individuel de CE match (0 ou 1 plot / 1 plot ou + selon le
-  // thème) — le pourcentage global est calculé dans les statistiques.
+  // leçon) — le pourcentage global est calculé dans les statistiques.
   const objA = evaluerContratMatch(cfg.critere, { plotsIdx: plotsA });
   const objB = evaluerContratMatch(cfg.critere, { plotsIdx: plotsB });
 
-  const base = { seanceId: CURRENT_SEANCE.ID, pouleLabel: CURRENT_POULE.id, themeId: themeId, phase: phase, niveau:'' };
+  const base = { seanceId: CURRENT_SEANCE.ID, pouleLabel: CURRENT_POULE.id, leconId: leconId, phase: phase, niveau:'' };
   const p1 = Object.assign({}, base, { eleveId: m.a.id, score: pointsA,
     victoire: gagnant==='a'?'oui':'non', objectifAtteint: objA,
     detail: `${m.a.nom} : ${gagnant==='a'?'match gagné':'match perdu'}, ${b.plotLabels[plotsA]} → ${pointsA} pts. Contrat : ${objA==='oui'?'réussi':'non réussi'}` });
@@ -2828,7 +2864,7 @@ function enregistrerBareme(phase, themeId){
 }
 
 /* ---------- Mode "mortSubite" : score classique + victoire immédiate ---------- */
-function mortSubiteUI(phase, themeId, cfg, s, m){
+function mortSubiteUI(phase, leconId, cfg, s, m){
   const target = (cfg.mortSubite && cfg.mortSubite.target) || 5;
   return `
     <p class="sub" style="text-align:center;margin-top:-4px">Premier à ${target} points, ou victoire immédiate via le bouton spécial ci-dessous.</p>
@@ -2837,46 +2873,46 @@ function mortSubiteUI(phase, themeId, cfg, s, m){
         <div class="nom">${m.a.nom}</div>
         <div class="val" id="score-a-${phase}">${s.a}</div>
         <div class="score-buttons">
-          <button class="btn small secondary" ${s.locked?'disabled':''} onclick="incrScore('${phase}','${themeId}','a',1)">+1</button>
-          <button class="btn small secondary" ${s.locked?'disabled':''} onclick="incrScore('${phase}','${themeId}','a',-1)">-1</button>
+          <button class="btn small secondary" ${s.locked?'disabled':''} onclick="incrScore('${phase}','${leconId}','a',1)">+1</button>
+          <button class="btn small secondary" ${s.locked?'disabled':''} onclick="incrScore('${phase}','${leconId}','a',-1)">-1</button>
         </div>
       </div>
       <div class="score-card">
         <div class="nom">${m.b.nom}</div>
         <div class="val" id="score-b-${phase}">${s.b}</div>
         <div class="score-buttons">
-          <button class="btn small secondary" ${s.locked?'disabled':''} onclick="incrScore('${phase}','${themeId}','b',1)">+1</button>
-          <button class="btn small secondary" ${s.locked?'disabled':''} onclick="incrScore('${phase}','${themeId}','b',-1)">-1</button>
+          <button class="btn small secondary" ${s.locked?'disabled':''} onclick="incrScore('${phase}','${leconId}','b',1)">+1</button>
+          <button class="btn small secondary" ${s.locked?'disabled':''} onclick="incrScore('${phase}','${leconId}','b',-1)">-1</button>
         </div>
       </div>
     </div>
     <div class="row" style="margin-top:10px;">
-      <button class="btn secondary" ${s.locked?'disabled':''} onclick="enregistrerMortSubite('${phase}','${themeId}','a')">${cfg.mortSubite.specialLabel}<br><strong>${m.a.nom}</strong></button>
-      <button class="btn secondary" ${s.locked?'disabled':''} onclick="enregistrerMortSubite('${phase}','${themeId}','b')">${cfg.mortSubite.specialLabel}<br><strong>${m.b.nom}</strong></button>
+      <button class="btn secondary" ${s.locked?'disabled':''} onclick="enregistrerMortSubite('${phase}','${leconId}','a')">${cfg.mortSubite.specialLabel}<br><strong>${m.a.nom}</strong></button>
+      <button class="btn secondary" ${s.locked?'disabled':''} onclick="enregistrerMortSubite('${phase}','${leconId}','b')">${cfg.mortSubite.specialLabel}<br><strong>${m.b.nom}</strong></button>
     </div>
     <div style="margin-top:14px; text-align:center;">
-      <button class="btn" id="btn-enregistrer-${phase}" ${s.locked?'disabled':''} onclick="enregistrerMatchClassique('${phase}','${themeId}')">
+      <button class="btn" id="btn-enregistrer-${phase}" ${s.locked?'disabled':''} onclick="enregistrerMatchClassique('${phase}','${leconId}')">
         ${s.locked ? '⏳ Enregistrement…' : '✓ Enregistrer (victoire classique à '+target+' pts)'}
       </button>
     </div>`;
 }
 
-function enregistrerMortSubite(phase, themeId, joueur){
-  const key = scoreKey(phase, themeId);
+function enregistrerMortSubite(phase, leconId, joueur){
+  const key = scoreKey(phase, leconId);
   const s = scoresLive[key];
   if(s.locked) return;
   s.locked = true;
   const btn = document.getElementById('btn-enregistrer-'+phase);
   if(btn){ btn.disabled = true; }
-  const cfg = getScoreCfg(phase, themeId);
-  const { m } = currentMatchup(themeId, s.matchIndex);
+  const cfg = getScoreCfg(phase, leconId);
+  const { m } = currentMatchup(leconId, s.matchIndex);
   const gagnant = joueur==='a' ? m.a : m.b;
   const perdant = joueur==='a' ? m.b : m.a;
 
   const objGagnant = evaluerContratMatch(cfg.critere, { gagne:true, viaMortSubite:true });
   const objPerdant = evaluerContratMatch(cfg.critere, { gagne:false, viaMortSubite:true });
 
-  const base = { seanceId: CURRENT_SEANCE.ID, pouleLabel: CURRENT_POULE.id, themeId: themeId, phase: phase, niveau:'' };
+  const base = { seanceId: CURRENT_SEANCE.ID, pouleLabel: CURRENT_POULE.id, leconId: leconId, phase: phase, niveau:'' };
   const detailTxt = `${gagnant.nom} bat ${perdant.nom} par mort subite (score au moment du point : ${s.a}-${s.b})`;
   const p1 = Object.assign({}, base, { eleveId: gagnant.id, score: 'mort subite', victoire:'oui',
     objectifAtteint: objGagnant, detail: `${detailTxt}. Contrat : ${objGagnant==='oui'?'réussi':'non réussi'}` });
@@ -2889,15 +2925,15 @@ function enregistrerMortSubite(phase, themeId, joueur){
   }).catch(e=>{ s.locked=false; gsFail(e); renderLeconEleve(); });
 }
 
-function enregistrerMatchClassique(phase, themeId){
-  const key = scoreKey(phase, themeId);
+function enregistrerMatchClassique(phase, leconId){
+  const key = scoreKey(phase, leconId);
   const s = scoresLive[key];
   if(s.locked) return;
   s.locked = true;
   const btn = document.getElementById('btn-enregistrer-'+phase);
   if(btn){ btn.disabled = true; btn.innerText = '⏳ Enregistrement…'; }
-  const { m } = currentMatchup(themeId, s.matchIndex);
-  saveDualResultat(phase, themeId, m, s.a, s.b,
+  const { m } = currentMatchup(leconId, s.matchIndex);
+  saveDualResultat(phase, leconId, m, s.a, s.b,
     `${m.a.nom}: ${s.a} / ${m.b.nom}: ${s.b} (victoire classique)`,
     `${m.b.nom}: ${s.b} / ${m.a.nom}: ${s.a} (victoire classique)`,
     { viaMortSubite: false }
@@ -2909,7 +2945,7 @@ function enregistrerMatchClassique(phase, themeId){
 }
 
 /* ---------- Mode "rallyCount" : valeur du point = nb de frappes ---------- */
-function rallyCountUI(phase, themeId, cfg, s, m){
+function rallyCountUI(phase, leconId, cfg, s, m){
   return `
     <p class="sub" style="text-align:center;margin-top:-4px">Objectif : ${cfg.rallyCount.cible} points en 5 minutes.</p>
     <div class="row">
@@ -2924,13 +2960,13 @@ function rallyCountUI(phase, themeId, cfg, s, m){
         <input type="number" id="rally-input-${phase}" min="1" value="1"></div>
     </div>
     <div class="row">
-      <button class="btn secondary" ${s.locked?'disabled':''} onclick="ajouterFrappes('${phase}','${themeId}')">+ Ajouter ce point</button>
-      <button class="btn" id="btn-enregistrer-${phase}" ${s.locked?'disabled':''} onclick="enregistrerRallyCount('${phase}','${themeId}')">✓ Terminer et enregistrer</button>
+      <button class="btn secondary" ${s.locked?'disabled':''} onclick="ajouterFrappes('${phase}','${leconId}')">+ Ajouter ce point</button>
+      <button class="btn" id="btn-enregistrer-${phase}" ${s.locked?'disabled':''} onclick="enregistrerRallyCount('${phase}','${leconId}')">✓ Terminer et enregistrer</button>
     </div>`;
 }
 
-function ajouterFrappes(phase, themeId){
-  const key = scoreKey(phase, themeId);
+function ajouterFrappes(phase, leconId){
+  const key = scoreKey(phase, leconId);
   const s = scoresLive[key];
   if(s.locked) return;
   const input = document.getElementById('rally-input-'+phase);
@@ -2938,17 +2974,17 @@ function ajouterFrappes(phase, themeId){
   renderLeconEleve();
 }
 
-function enregistrerRallyCount(phase, themeId){
-  const key = scoreKey(phase, themeId);
+function enregistrerRallyCount(phase, leconId){
+  const key = scoreKey(phase, leconId);
   const s = scoresLive[key];
   if(s.locked) return;
   s.locked = true;
-  const cfg = getScoreCfg(phase, themeId);
+  const cfg = getScoreCfg(phase, leconId);
   const eleveId = document.getElementById('rally-qui-'+phase).value;
   const nom = (CURRENT_POULE.membres.find(mem=>mem.id===eleveId)||{}).nom || '';
   const payload = {
     seanceId: CURRENT_SEANCE.ID, eleveId: eleveId, pouleLabel: CURRENT_POULE.id,
-    themeId: themeId, phase: phase, niveau:'',
+    leconId: leconId, phase: phase, niveau:'',
     detail: `${nom} : ${s.total} points cumulés`, score: s.total,
     objectifAtteint: s.total >= cfg.rallyCount.cible ? 'oui' : 'non'
   };
@@ -2960,9 +2996,9 @@ function enregistrerRallyCount(phase, themeId){
 }
 
 /* ---------- Mode "servicePoints" : classification par échange ---------- */
-function servicePointsUI(phase, themeId, cfg, s, m){
+function servicePointsUI(phase, leconId, cfg, s, m){
   const opts = cfg.servicePoints.options.map(o=>
-    `<button class="btn small secondary" ${s.locked?'disabled':''} onclick="ajouterServicePoint('${phase}','${themeId}',${o.valeur})">${o.label} (+${o.valeur})</button>`
+    `<button class="btn small secondary" ${s.locked?'disabled':''} onclick="ajouterServicePoint('${phase}','${leconId}',${o.valeur})">${o.label} (+${o.valeur})</button>`
   ).join('');
   return `
     <p class="sub" style="text-align:center;margin-top:-4px">Objectif : ${cfg.servicePoints.cible} points sur 10 services.</p>
@@ -2975,29 +3011,29 @@ function servicePointsUI(phase, themeId, cfg, s, m){
     </div>
     <div class="row" style="flex-direction:column;">${opts}</div>
     <div style="text-align:center; margin-top:14px;">
-      <button class="btn" id="btn-enregistrer-${phase}" ${s.locked?'disabled':''} onclick="enregistrerServicePoints('${phase}','${themeId}')">✓ Terminer et enregistrer</button>
+      <button class="btn" id="btn-enregistrer-${phase}" ${s.locked?'disabled':''} onclick="enregistrerServicePoints('${phase}','${leconId}')">✓ Terminer et enregistrer</button>
     </div>`;
 }
 
-function ajouterServicePoint(phase, themeId, valeur){
-  const key = scoreKey(phase, themeId);
+function ajouterServicePoint(phase, leconId, valeur){
+  const key = scoreKey(phase, leconId);
   const s = scoresLive[key];
   if(s.locked) return;
   s.total += valeur; s.servicesDone += 1;
   renderLeconEleve();
 }
 
-function enregistrerServicePoints(phase, themeId){
-  const key = scoreKey(phase, themeId);
+function enregistrerServicePoints(phase, leconId){
+  const key = scoreKey(phase, leconId);
   const s = scoresLive[key];
   if(s.locked) return;
   s.locked = true;
-  const cfg = getScoreCfg(phase, themeId);
+  const cfg = getScoreCfg(phase, leconId);
   const eleveId = document.getElementById('service-qui-'+phase).value;
   const nom = (CURRENT_POULE.membres.find(mem=>mem.id===eleveId)||{}).nom || '';
   const payload = {
     seanceId: CURRENT_SEANCE.ID, eleveId: eleveId, pouleLabel: CURRENT_POULE.id,
-    themeId: themeId, phase: phase, niveau:'',
+    leconId: leconId, phase: phase, niveau:'',
     detail: `${nom} : ${s.total} points sur ${s.servicesDone} services`, score: s.total,
     objectifAtteint: s.total >= cfg.servicePoints.cible ? 'oui' : 'non'
   };
@@ -3008,17 +3044,17 @@ function enregistrerServicePoints(phase, themeId){
   }).catch(e=>{ s.locked=false; gsFail(e); renderLeconEleve(); });
 }
 
-function compteurContrats(phase, themeId, preselectedEleveId){
+function compteurContrats(phase, leconId, preselectedEleveId){
   return `<div class="card">
     <p><strong>Suivi des essais (contrat de réussite)</strong></p>
     <div class="row">
-      <div><label>Pour qui ?</label>${pouleSelectHtml('essai-qui-'+themeId, preselectedEleveId)}</div>
+      <div><label>Pour qui ?</label>${pouleSelectHtml('essai-qui-'+leconId, preselectedEleveId)}</div>
     </div>
-    <div class="row" id="essais-${themeId}">
+    <div class="row" id="essais-${leconId}">
       ${[1,2,3].map(i=>`
         <div>
           <label>Essai ${i}</label>
-          <select id="essai-${themeId}-${i}">
+          <select id="essai-${leconId}-${i}">
             <option value="">—</option>
             <option value="oui">Réussi ✅</option>
             <option value="non">Non réussi ❌</option>
@@ -3026,26 +3062,26 @@ function compteurContrats(phase, themeId, preselectedEleveId){
         </div>`).join('')}
     </div>
     <div style="text-align:center; margin-top:10px;">
-      <button class="btn" id="btn-essais-${themeId}" onclick="enregistrerContrats('${themeId}')">✓ Enregistrer ces essais</button>
+      <button class="btn" id="btn-essais-${leconId}" onclick="enregistrerContrats('${leconId}')">✓ Enregistrer ces essais</button>
     </div>
   </div>`;
 }
 
-function enregistrerContrats(themeId){
-  const btn = document.getElementById('btn-essais-'+themeId);
+function enregistrerContrats(leconId){
+  const btn = document.getElementById('btn-essais-'+leconId);
   if(btn.disabled) return; // évite les doubles-clics accidentels
   btn.disabled = true; btn.innerText = '⏳ Enregistrement…';
-  const eleveId = document.getElementById('essai-qui-'+themeId).value;
+  const eleveId = document.getElementById('essai-qui-'+leconId).value;
   const nom = (CURRENT_POULE.membres.find(mem=>mem.id===eleveId)||{}).nom || '';
-  const essais = [1,2,3].map(i=>document.getElementById('essai-'+themeId+'-'+i).value).filter(v=>v==='oui'||v==='non');
+  const essais = [1,2,3].map(i=>document.getElementById('essai-'+leconId+'-'+i).value).filter(v=>v==='oui'||v==='non');
   if(!essais.length){ btn.disabled=false; btn.innerText='✓ Enregistrer ces essais'; return; }
 
   // Chaque essai est son propre contrat individuel (oui/non) — le
-  // pourcentage de réussite global du thème est ensuite calculé dans les
+  // pourcentage de réussite global du leçon est ensuite calculé dans les
   // statistiques (seuil de 66%, comme pour les matchs à thème).
   const promises = essais.map((v,i) => saveResultat({
     seanceId: CURRENT_SEANCE.ID, eleveId: eleveId, pouleLabel: CURRENT_POULE.id,
-    themeId: themeId, phase:'orange', niveau:'',
+    leconId: leconId, phase:'orange', niveau:'',
     detail: `${nom} : essai ${i+1} — ${v==='oui'?'réussi':'non réussi'}`,
     score:'', objectifAtteint: v
   }));
@@ -3114,7 +3150,7 @@ function computeStats(rows){
   // L'échauffement n'est pas une réussite/échec (nombres bruts, à part),
   // et la situation de référence utilise désormais un code couleur dédié
   // (voir referenceStatsHtml) plutôt qu'un simple oui/non.
-  const rowsFiltrees = rows.filter(r=>r.ThemeID!=='echauffement' && r.Phase!=='bleu');
+  const rowsFiltrees = rows.filter(r=>r.LeconID!=='echauffement' && r.Phase!=='bleu');
 
   const withObj = rowsFiltrees.filter(r=>r.ObjectifAtteint==='oui'||r.ObjectifAtteint==='non');
   const reussis = withObj.filter(r=>r.ObjectifAtteint==='oui').length;
@@ -3133,11 +3169,11 @@ function computeStats(rows){
     });
     return g;
   };
-  const nomChapitre = r=>{ const t=findTheme(r.ThemeID); return t ? `Chap. ${t.chapitre.id} — ${t.chapitre.nom}` : r.ThemeID; };
-  const nomTheme = r=>{ const t=findTheme(r.ThemeID); return t ? t.theme.nom : r.ThemeID; };
+  const nomTheme = r=>{ const t=findLecon(r.LeconID); return t ? `Chap. ${t.theme.id} — ${t.theme.nom}` : r.LeconID; };
+  const nomLecon = r=>{ const t=findLecon(r.LeconID); return t ? t.lecon.nom : r.LeconID; };
 
   return { withObjCount: withObj.length, reussisCount: reussis, pctGlobal,
-    parChapitre: groupBy(nomChapitre), parTheme: groupBy(nomTheme) };
+    parTheme: groupBy(nomTheme), parLecon: groupBy(nomLecon) };
 }
 
 // Taux de victoires : uniquement les phases "match" (jaune/bleu), basé sur
@@ -3182,7 +3218,7 @@ function referenceStatsHtml(rows){
 
 // Échauffement : nombres bruts (records), pas de pourcentage de réussite.
 function computeEchauffement(rows){
-  const vert = rows.filter(r=>r.Phase==='vert' && r.ThemeID==='echauffement');
+  const vert = rows.filter(r=>r.Phase==='vert' && r.LeconID==='echauffement');
   const parDefi = {};
   vert.forEach(r=>{
     const ch = WARMUP_CHALLENGES.find(c=>c.key===r.Niveau);
@@ -3208,16 +3244,16 @@ function echauffementStatsHtml(rows){
 }
 
 // Historique des séances : regroupe les résultats par séance (numéro,
-// date, thème), pour que l'élève retrouve facilement une ancienne leçon.
+// date, leçon), pour que l'élève retrouve facilement une ancienne leçon.
 function historiqueSeancesHtml(rows){
   const parSeance = {};
   rows.forEach(r=>{
     const key = r.SeanceID || 'inconnue';
     if(!parSeance[key]){
-      const t = findTheme(r.ThemeID);
+      const t = findLecon(r.LeconID);
       parSeance[key] = {
         numero: r.NumeroSeance || '', date: r.DateSeance || '',
-        theme: t ? t.theme.nom : (r.ThemeID==='echauffement'?'Échauffement':r.ThemeID),
+        lecon: t ? t.lecon.nom : (r.LeconID==='echauffement'?'Échauffement':r.LeconID),
         count: 0
       };
     }
@@ -3225,15 +3261,15 @@ function historiqueSeancesHtml(rows){
   });
   const seances = Object.values(parSeance).sort((a,b)=> Number(b.numero||0) - Number(a.numero||0));
   if(!seances.length) return '';
-  let html = '<h2 style="margin:16px 0 6px;">🗓️ Historique des séances</h2><table><tr><th>N°</th><th>Date</th><th>Thème travaillé</th><th>Résultats</th></tr>';
+  let html = '<h2 style="margin:16px 0 6px;">🗓️ Historique des séances</h2><table><tr><th>N°</th><th>Date</th><th>Leçon travaillé</th><th>Résultats</th></tr>';
   seances.forEach(s=>{
-    html += `<tr><td><strong>${s.numero||'—'}</strong></td><td>${s.date||'—'}</td><td>${s.theme}</td><td>${s.count}</td></tr>`;
+    html += `<tr><td><strong>${s.numero||'—'}</strong></td><td>${s.date||'—'}</td><td>${s.lecon}</td><td>${s.count}</td></tr>`;
   });
   html += '</table>';
   return html;
 }
 
-// Araignée (radar chart) SVG : un axe par chapitre où l'élève a des
+// Araignée (radar chart) SVG : un axe par thème où l'élève a des
 // résultats, rayon proportionnel au % de contrats réussis. Fait ressortir
 // visuellement les points forts (loin du centre) et faibles (près du centre).
 function radarChartSVG(axes, colorise){
@@ -3252,7 +3288,7 @@ function radarChartSVG(axes, colorise){
 
   // Découpe un libellé trop long sur 2 lignes (centrées), pour éviter
   // qu'il ne dépasse du cadre SVG sur les araignées à noms longs
-  // (chapitres personnalisés notamment).
+  // (thèmes personnalisés notamment).
   function labelTspans(label, x, y){
     if(String(label).length <= 13) return `<tspan x="${x}" y="${y}">${label}</tspan>`;
     const words = String(label).split(' ');
@@ -3293,14 +3329,14 @@ function radarChartSVG(axes, colorise){
 
 function radarStatsHtml(rows){
   const stats = computeStats(rows);
-  const axes = Object.keys(stats.parChapitre).map(nom=>{
-    const d = stats.parChapitre[nom];
+  const axes = Object.keys(stats.parTheme).map(nom=>{
+    const d = stats.parTheme[nom];
     return { label: nom.replace(/^Chap\. \d+ — /,''), pct: d.withObj ? 100*d.reussis/d.withObj : 0, withObj: d.withObj };
   }).filter(a=>a.withObj>0);
 
   let html = '<h2 style="margin:16px 0 6px;">🕸️ Points forts / points faibles</h2>';
   if(axes.length < 3){
-    html += '<div class="card"><p class="sub">Pas encore assez de chapitres avec résultats pour tracer l\'araignée (au moins 3 nécessaires).</p></div>';
+    html += '<div class="card"><p class="sub">Pas encore assez de thèmes avec résultats pour tracer l\'araignée (au moins 3 nécessaires).</p></div>';
     return html;
   }
   const meilleur = axes.reduce((a,b)=> b.pct>a.pct ? b : a);
@@ -3338,16 +3374,16 @@ function statsBlockHtml(rows, donutColor, sousTitre){
   </div>`;
   html += radarStatsHtml(rows);
   html += historiqueSeancesHtml(rows);
-  html += '<h2 style="margin-bottom:6px;">Par chapitre</h2>';
-  Object.keys(stats.parChapitre).forEach(nom=>{
-    const d = stats.parChapitre[nom];
+  html += '<h2 style="margin-bottom:6px;">Par thème</h2>';
+  Object.keys(stats.parTheme).forEach(nom=>{
+    const d = stats.parTheme[nom];
     const pct = d.withObj ? 100*d.reussis/d.withObj : 0;
     const badgeSeuil = d.withObj ? seuilBadge(pct) : '';
     html += statBar(nom+badgeSeuil, pct, `${d.reussis}/${d.withObj} contrats réussis · ${d.total} résultats`, 'var(--bleu)');
   });
-  html += '<h2 style="margin:16px 0 6px;">Par thème</h2>';
-  Object.keys(stats.parTheme).forEach(nom=>{
-    const d = stats.parTheme[nom];
+  html += '<h2 style="margin:16px 0 6px;">Par leçon</h2>';
+  Object.keys(stats.parLecon).forEach(nom=>{
+    const d = stats.parLecon[nom];
     const pct = d.withObj ? 100*d.reussis/d.withObj : 0;
     const badgeSeuil = d.withObj ? seuilBadge(pct) : '';
     html += statBar(nom+badgeSeuil, pct, `${d.reussis}/${d.withObj} contrats réussis · ${d.total} résultats`, 'var(--orange)');
@@ -3380,12 +3416,12 @@ function renderMaProgression(eleveId){
 
     let html = statsBlockHtml(rows, 'var(--vert)', 'objectifs atteints (matchs gagnés + contrats validés)');
 
-    html += '<h2 style="margin:16px 0 6px;">Détail des résultats</h2><table><tr><th>Date</th><th>Thème</th><th>Phase</th><th>Détail</th><th>Résultat</th></tr>';
+    html += '<h2 style="margin:16px 0 6px;">Détail des résultats</h2><table><tr><th>Date</th><th>Leçon</th><th>Phase</th><th>Détail</th><th>Résultat</th></tr>';
     rows.sort((a,b)=> new Date(b.DateSeance) - new Date(a.DateSeance));
     rows.forEach(r=>{
-      const t = findTheme(r.ThemeID);
-      const nomTheme = t ? t.theme.nom : (r.ThemeID==='echauffement'?'Échauffement':r.ThemeID);
-      html += `<tr><td>${r.DateSeance||'—'}</td><td>${nomTheme}</td><td>${r.Phase}</td><td>${r.Detail||''}</td><td>${resultatBadge(r)}</td></tr>`;
+      const t = findLecon(r.LeconID);
+      const nomLecon = t ? t.lecon.nom : (r.LeconID==='echauffement'?'Échauffement':r.LeconID);
+      html += `<tr><td>${r.DateSeance||'—'}</td><td>${nomLecon}</td><td>${r.Phase}</td><td>${r.Detail||''}</td><td>${resultatBadge(r)}</td></tr>`;
     });
     html += '</table>';
     c.innerHTML = html;
@@ -3396,7 +3432,7 @@ function renderMaProgression(eleveId){
    BANQUE D'EXERCICES (accessible aux élèves en autonomie, et à
    l'enseignant pour contrôler la cohérence de tous les contenus)
    ============================================================ */
-let BANQUE_THEME_ID = null;
+let BANQUE_LECON_ID = null;
 let BANQUE_PHASE = 'jaune';
 
 function ouvrirBanque(){
@@ -3406,7 +3442,7 @@ function ouvrirBanque(){
   if(pc) pc.innerHTML = '';
   renderBanque();
   showScreen('screen-banque');
-  Promise.all([rafraichirExercicesCustom(), rafraichirChapitresCustom(), rafraichirThemesPersonnalises()]).then(()=>{
+  Promise.all([rafraichirExercicesCustom(), rafraichirThemesCustom(), rafraichirLeconsPersonnalises()]).then(()=>{
     if(!document.getElementById('screen-banque').classList.contains('hidden')) renderBanque();
   });
 }
@@ -3418,45 +3454,45 @@ function renderBanque(){
     : eleveHubTabsHtml('banque');
   let html = `${retour}
     <h1>📚 Banque d'exercices</h1>
-    <p class="sub">Consultez ou retravaillez n'importe quel exercice, même en dehors du thème du jour — utile pour cibler vos points faibles.</p>
+    <p class="sub">Consultez ou retravaillez n'importe quel exercice, même en dehors du leçon du jour — utile pour cibler vos points faibles.</p>
     ${!CURRENT_POULE ? `<div class="msg" style="background:#fff4e6; color:#e8590c;">Vous consultez la banque sans poule déclarée : les fiches sont visibles, mais pour enregistrer un résultat, déclarez d'abord votre poule dans l'onglet "Leçon du jour".</div>` : ''}`;
-  CHAPITRES.forEach(ch=>{
-    const chAffiche = getChapitresAffiches().find(c=>c.id===ch.id);
-    if(!chAffiche) return; // chapitre masqué par l'enseignant
-    const customDuChapitre = CUSTOM_EXERCICES_CACHE.filter(ex=>Number(ex.ChapitreID)===ch.id);
-    const themesPersoDuChapitre = THEMES_PERSONNALISES_CACHE.filter(tp=>String(tp.ChapitreID)===String(ch.id));
-    const themesAffiches = getThemesAffiches(ch.id);
-    html += `<div class="card">
-      <strong>Chapitre ${ch.id} — ${chAffiche.nom}</strong>
+  THEMES.forEach(ch=>{
+    const chAffiche = getThemesAffiches().find(c=>c.id===ch.id);
+    if(!chAffiche) return; // thème masqué par l'enseignant
+    const customDuTheme = CUSTOM_EXERCICES_CACHE.filter(ex=>Number(ex.ThemeID)===ch.id);
+    const leconsPersoDuTheme = LECONS_PERSONNALISES_CACHE.filter(tp=>String(tp.ThemeID)===String(ch.id));
+    const leconsAffiches = getLeconsAffiches(ch.id);
+    html += `<div class="card" style="border-left:5px solid ${chAffiche.couleur};">
+      <strong>${pastilleTheme(ch.id)}Thème ${ch.id} — ${chAffiche.nom}</strong>
       <div style="margin-top:10px; display:flex; flex-direction:column; gap:8px;">
-        ${themesAffiches.map(t=>`
-          <div class="card" style="cursor:pointer; margin:0;" onclick="ouvrirBanqueTheme('${t.id}')">
+        ${leconsAffiches.map(t=>`
+          <div class="card" style="cursor:pointer; margin:0;" onclick="ouvrirBanqueLecon('${t.id}')">
             <strong>${t.nom}</strong>
           </div>`).join('')}
-        ${themesPersoDuChapitre.map(tp=>`
-          <div class="card" style="cursor:pointer; margin:0; border-color:#7048e8;" onclick="ouvrirBanqueTheme('theme-perso-${tp.ID}')">
-            <strong>🧩 ${tp.Nom}</strong> <span class="sub">(thème personnalisé)</span>
+        ${leconsPersoDuTheme.map(tp=>`
+          <div class="card" style="cursor:pointer; margin:0; border-color:#7048e8;" onclick="ouvrirBanqueLecon('lecon-perso-${tp.ID}')">
+            <strong>🧩 ${tp.Nom}</strong> <span class="sub">(leçon personnalisé)</span>
           </div>`).join('')}
-        ${customDuChapitre.map(ex=>`
-          <div class="card" style="cursor:pointer; margin:0; border-color:var(--orange);" onclick="ouvrirBanqueTheme('custom-${ex.ID}')">
+        ${customDuTheme.map(ex=>`
+          <div class="card" style="cursor:pointer; margin:0; border-color:var(--orange);" onclick="ouvrirBanqueLecon('custom-${ex.ID}')">
             <strong>⭐ ${ex.Nom}</strong> <span class="sub">(exercice personnalisé)</span>
           </div>`).join('')}
       </div>
     </div>`;
   });
-  CUSTOM_CHAPITRES_CACHE.forEach(chCustom=>{
-    const exercicesDuChapitre = CUSTOM_EXERCICES_CACHE.filter(ex=>ex.ChapitreID===chCustom.ID);
-    const themesPersoDuChapitre = THEMES_PERSONNALISES_CACHE.filter(tp=>tp.ChapitreID===chCustom.ID);
-    if(!exercicesDuChapitre.length && !themesPersoDuChapitre.length) return;
-    html += `<div class="card" style="border-color:var(--orange);">
-      <strong>📁 ${chCustom.Nom} <span class="sub">(chapitre personnalisé)</span></strong>
+  CUSTOM_THEMES_CACHE.forEach(chCustom=>{
+    const exercicesDuTheme = CUSTOM_EXERCICES_CACHE.filter(ex=>ex.ThemeID===chCustom.ID);
+    const leconsPersoDuTheme = LECONS_PERSONNALISES_CACHE.filter(tp=>tp.ThemeID===chCustom.ID);
+    if(!exercicesDuTheme.length && !leconsPersoDuTheme.length) return;
+    html += `<div class="card" style="border-left:5px solid ${chCustom.Couleur||COULEUR_THEME_PAR_DEFAUT}; border-color:var(--orange);">
+      <strong>${pastilleTheme(chCustom.ID)}📁 ${chCustom.Nom} <span class="sub">(thème personnalisé)</span></strong>
       <div style="margin-top:10px; display:flex; flex-direction:column; gap:8px;">
-        ${themesPersoDuChapitre.map(tp=>`
-          <div class="card" style="cursor:pointer; margin:0; border-color:#7048e8;" onclick="ouvrirBanqueTheme('theme-perso-${tp.ID}')">
-            <strong>🧩 ${tp.Nom}</strong> <span class="sub">(thème personnalisé)</span>
+        ${leconsPersoDuTheme.map(tp=>`
+          <div class="card" style="cursor:pointer; margin:0; border-color:#7048e8;" onclick="ouvrirBanqueLecon('lecon-perso-${tp.ID}')">
+            <strong>🧩 ${tp.Nom}</strong> <span class="sub">(leçon personnalisé)</span>
           </div>`).join('')}
-        ${exercicesDuChapitre.map(ex=>`
-          <div class="card" style="cursor:pointer; margin:0; border-color:var(--orange);" onclick="ouvrirBanqueTheme('custom-${ex.ID}')">
+        ${exercicesDuTheme.map(ex=>`
+          <div class="card" style="cursor:pointer; margin:0; border-color:var(--orange);" onclick="ouvrirBanqueLecon('custom-${ex.ID}')">
             <strong>⭐ ${ex.Nom}</strong> <span class="sub">(exercice personnalisé)</span>
           </div>`).join('')}
       </div>
@@ -3465,19 +3501,19 @@ function renderBanque(){
   el.innerHTML = html;
 }
 
-function ouvrirBanqueTheme(themeId){
-  BANQUE_THEME_ID = themeId;
+function ouvrirBanqueLecon(leconId){
+  BANQUE_LECON_ID = leconId;
   BANQUE_PHASE = 'jaune';
-  renderBanqueTheme();
-  showScreen('screen-banque-theme');
+  renderBanqueLecon();
+  showScreen('screen-banque-lecon');
 }
 
-function renderBanqueTheme(){
-  const found = findTheme(BANQUE_THEME_ID);
+function renderBanqueLecon(){
+  const found = findLecon(BANQUE_LECON_ID);
   if(!found) return;
-  const { chapitre, theme } = found;
-  const isCustom = String(theme.id).startsWith('custom-');
-  const el = document.getElementById('screen-banque-theme');
+  const { theme, lecon } = found;
+  const isCustom = String(lecon.id).startsWith('custom-');
+  const el = document.getElementById('screen-banque-lecon');
   let phases = [
     {key:'jaune', label:'Match à thème'},
     {key:'orange', label:'Situation décontextualisée'},
@@ -3487,18 +3523,18 @@ function renderBanqueTheme(){
     // Un exercice personnalisé n'a qu'un seul type (match OU décontextualisée)
     // et pas de situation de référence associée.
     phases = phases.filter(p=>
-      (p.key==='jaune' && theme.sa2.but!=='—') ||
-      (p.key==='orange' && theme.sa1.but!=='—')
+      (p.key==='jaune' && lecon.sa2.but!=='—') ||
+      (p.key==='orange' && lecon.sa1.but!=='—')
     );
     if(!phases.find(p=>p.key===BANQUE_PHASE)) BANQUE_PHASE = phases.length ? phases[0].key : 'jaune';
   }
   let html = `<p class="link" onclick="renderBanque(); showScreen('screen-banque')">&larr; retour à la banque</p>
-    <h1>${theme.nom}</h1>
-    <div class="sub">Chapitre ${chapitre.id} — ${chapitre.nom}</div>
+    <h1>${lecon.nom}</h1>
+    <div class="sub" style="display:flex; align-items:center;">${pastilleTheme(theme.id)}Thème ${theme.id} — ${theme.nom}</div>
     <div class="phase-nav">`;
   phases.forEach(p=>{
     const cls = p.key===BANQUE_PHASE ? 'active '+p.key : '';
-    html += `<div class="phase-pill ${cls}" onclick="BANQUE_PHASE='${p.key}'; renderBanqueTheme();">${p.label}</div>`;
+    html += `<div class="phase-pill ${cls}" onclick="BANQUE_PHASE='${p.key}'; renderBanqueLecon();">${p.label}</div>`;
   });
   html += `</div><div id="banque-phase-content"></div>`;
   el.innerHTML = html;
@@ -3507,18 +3543,18 @@ function renderBanqueTheme(){
   if(!CURRENT_POULE){
     // Pas de poule déclarée : on affiche uniquement la fiche (sans les
     // compteurs, qui ont besoin de savoir qui joue).
-    if(BANQUE_PHASE==='jaune') content.innerHTML = ficheSA(theme.sa2, "Match à thème");
-    else if(BANQUE_PHASE==='orange') content.innerHTML = ficheSA(theme.sa1, "Situation décontextualisée");
+    if(BANQUE_PHASE==='jaune') content.innerHTML = ficheSA(lecon.sa2, "Match à thème");
+    else if(BANQUE_PHASE==='orange') content.innerHTML = ficheSA(lecon.sa1, "Situation décontextualisée");
     else if(BANQUE_PHASE==='bleu') content.innerHTML = `<table class="fiche-table">
       <tr><th class="bar" colspan="2">Situation de référence</th></tr>
-      <tr><td class="label">But</td><td>${chapitre.reference.but}</td></tr>
-      <tr><td class="label">Règle spéciale</td><td>${chapitre.reference.regleSpeciale[theme.id]}</td></tr>
-    </table>${courtDiagram(chapitre.reference.diagram ? chapitre.reference.diagram[theme.id] : 'full')}`;
+      <tr><td class="label">But</td><td>${theme.reference.but}</td></tr>
+      <tr><td class="label">Règle spéciale</td><td>${theme.reference.regleSpeciale[lecon.id]}</td></tr>
+    </table>${courtDiagram(theme.reference.diagram ? theme.reference.diagram[lecon.id] : 'full')}`;
     return;
   }
-  if(BANQUE_PHASE==='jaune') content.innerHTML = renderJaune(chapitre, theme);
-  if(BANQUE_PHASE==='orange') content.innerHTML = renderOrange(chapitre, theme);
-  if(BANQUE_PHASE==='bleu') content.innerHTML = renderBleu(chapitre, theme);
+  if(BANQUE_PHASE==='jaune') content.innerHTML = renderJaune(theme, lecon);
+  if(BANQUE_PHASE==='orange') content.innerHTML = renderOrange(theme, lecon);
+  if(BANQUE_PHASE==='bleu') content.innerHTML = renderBleu(theme, lecon);
 }
 
 /* ============================================================
@@ -3715,66 +3751,66 @@ function deleteEleveUI(id){
 function renderAdminSeances(c){
   c.innerHTML = `
     <div class="card">
-      <p class="sub">Vous annoncez oralement le <strong>numéro de séance</strong> ci-dessous, les élèves le saisissent pour retrouver directement le bon thème.</p>
+      <p class="sub">Vous annoncez oralement le <strong>numéro de séance</strong> ci-dessous, les élèves le saisissent pour retrouver directement le bon leçon.</p>
       <div class="row">
         <div><label>Date</label><input id="new-seance-date" type="date"></div>
         <div><label>Numéro de séance (à annoncer aux élèves)</label><input id="new-seance-numero" type="number"></div>
       </div>
       <label>Titre libre</label><input id="new-seance-titre" placeholder="Ex : Séance 3">
-      <label>Chapitre</label>
-      <select id="new-seance-chapitre" onchange="updateThemeOptions()">${chapitreOptionsHtml()}</select>
-      <label>Thème travaillé <span class="sub">(sert de thème de secours pour le carnet — voir ci-dessous)</span></label>
-      <select id="new-seance-theme"></select>
+      <label>Thème</label>
+      <select id="new-seance-theme" onchange="updateLeconOptions()">${themeOptionsHtml()}</select>
+      <label>Leçon travaillé <span class="sub">(sert de leçon de secours pour le carnet — voir ci-dessous)</span></label>
+      <select id="new-seance-lecon"></select>
       <label style="display:flex; align-items:center; gap:8px; margin-top:10px;">
         <input type="checkbox" id="new-seance-carnet" style="width:auto;" onchange="if(this.checked) document.getElementById('new-seance-eval').checked=false;">
         📓 Activer "Mon carnet" pour cette séance (entraînement individualisé AFL2)
       </label>
-      <p class="sub" style="margin-top:-4px;">Débloque un onglet où chaque élève fixe son propre axe de travail. Le thème choisi ci-dessus sert de filet de sécurité pour un élève qui n'aurait pas encore d'objectif personnel actif.</p>
+      <p class="sub" style="margin-top:-4px;">Débloque un onglet où chaque élève fixe son propre axe de travail. Le leçon choisi ci-dessus sert de filet de sécurité pour un élève qui n'aurait pas encore d'objectif personnel actif.</p>
       <label style="display:flex; align-items:center; gap:8px; margin-top:10px;">
         <input type="checkbox" id="new-seance-eval" style="width:auto;" onchange="if(this.checked) document.getElementById('new-seance-carnet').checked=false;">
         🎓 Séance d'évaluation finale (mode vierge — échauffement + match classique uniquement)
       </label>
-      <p class="sub" style="margin-top:-4px;">Supprime les onglets orange/bleu et tout bonus de score : juste l'échauffement puis des matchs classiques (règles UNSS, +1/-1, pas de thème), avec classement automatique de la poule. Incompatible avec "Mon carnet" (l'un désactive l'autre).</p>
+      <p class="sub" style="margin-top:-4px;">Supprime les onglets orange/bleu et tout bonus de score : juste l'échauffement puis des matchs classiques (règles UNSS, +1/-1, pas de leçon), avec classement automatique de la poule. Incompatible avec "Mon carnet" (l'un désactive l'autre).</p>
       <button class="btn" onclick="createSeanceUI()">+ Créer la séance</button>
     </div>
     <div class="card" id="liste-seances">Chargement…</div>`;
-  updateThemeOptions();
-  Promise.all([rafraichirChapitresCustom(), rafraichirExercicesCustom(), rafraichirThemesPersonnalises()]).then(()=>{
-    const sel = document.getElementById('new-seance-chapitre');
-    if(sel){ const val = sel.value; sel.innerHTML = chapitreOptionsHtml(val); updateThemeOptions(); }
+  updateLeconOptions();
+  Promise.all([rafraichirThemesCustom(), rafraichirExercicesCustom(), rafraichirLeconsPersonnalises()]).then(()=>{
+    const sel = document.getElementById('new-seance-theme');
+    if(sel){ const val = sel.value; sel.innerHTML = themeOptionsHtml(val); updateLeconOptions(); }
   });
   getSeances().then(seances=>{
     seances = seances || [];
     document.getElementById('new-seance-numero').value = seances.length
       ? Math.max(...seances.map(s=>Number(s.Numero)||0)) + 1 : 1;
-    let html = '<table><tr><th>N°</th><th>Date</th><th>Titre</th><th>Thème</th><th></th></tr>';
+    let html = '<table><tr><th>N°</th><th>Date</th><th>Titre</th><th>Leçon</th><th></th></tr>';
     seances.sort((a,b)=> Number(b.Numero)-Number(a.Numero));
     seances.forEach(s=>{
-      const t = findTheme(s.ThemeID);
-      html += `<tr><td><strong>${s.Numero}</strong></td><td>${s.Date}</td><td>${s.Titre}${s.CarnetActif ? ' <span class="badge" style="background:#7048e8;">📓 carnet</span>' : ''}${s.EvaluationFinale ? ' <span class="badge" style="background:#e8590c;">🎓 évaluation</span>' : ''}</td><td>${t?t.theme.nom:s.ThemeID}</td>
+      const t = findLecon(s.LeconID);
+      html += `<tr><td><strong>${s.Numero}</strong></td><td>${s.Date}</td><td>${s.Titre}${s.CarnetActif ? ' <span class="badge" style="background:#7048e8;">📓 carnet</span>' : ''}${s.EvaluationFinale ? ' <span class="badge" style="background:#e8590c;">🎓 évaluation</span>' : ''}</td><td>${t?pastilleTheme(t.theme.id)+t.lecon.nom:s.LeconID}</td>
         <td><span class="link" onclick="deleteSeanceUI('${s.ID}')">supprimer</span></td></tr>`;
     });
     html += '</table>';
     document.getElementById('liste-seances').innerHTML = seances.length ? html : '<p class="sub">Aucune séance créée.</p>';
   }).catch(gsFail);
 }
-function updateThemeOptions(){
-  const selectedVal = document.getElementById('new-seance-chapitre').value;
-  const themeSelect = document.getElementById('new-seance-theme');
-  const builtIn = CHAPITRES.find(c=>String(c.id)===String(selectedVal));
+function updateLeconOptions(){
+  const selectedVal = document.getElementById('new-seance-theme').value;
+  const leconSelect = document.getElementById('new-seance-lecon');
+  const builtIn = THEMES.find(c=>String(c.id)===String(selectedVal));
   let opts = '';
   if(builtIn){
-    opts += getThemesAffiches(builtIn.id).map(t=>`<option value="${t.id}">${t.nom}</option>`).join('');
+    opts += getLeconsAffiches(builtIn.id).map(t=>`<option value="${t.id}">${t.nom}</option>`).join('');
   }
-  const themesPersoDuChapitre = THEMES_PERSONNALISES_CACHE.filter(tp=>String(tp.ChapitreID)===String(selectedVal));
-  if(themesPersoDuChapitre.length){
-    opts += themesPersoDuChapitre.map(tp=>`<option value="theme-perso-${tp.ID}">🧩 ${tp.Nom} (thème personnalisé)</option>`).join('');
+  const leconsPersoDuTheme = LECONS_PERSONNALISES_CACHE.filter(tp=>String(tp.ThemeID)===String(selectedVal));
+  if(leconsPersoDuTheme.length){
+    opts += leconsPersoDuTheme.map(tp=>`<option value="lecon-perso-${tp.ID}">🧩 ${tp.Nom} (leçon personnalisé)</option>`).join('');
   }
-  const customExosDuChapitre = CUSTOM_EXERCICES_CACHE.filter(ex=>String(ex.ChapitreID)===String(selectedVal));
-  if(customExosDuChapitre.length){
-    opts += customExosDuChapitre.map(ex=>`<option value="custom-${ex.ID}">⭐ ${ex.Nom} (personnalisé)</option>`).join('');
+  const customExosDuTheme = CUSTOM_EXERCICES_CACHE.filter(ex=>String(ex.ThemeID)===String(selectedVal));
+  if(customExosDuTheme.length){
+    opts += customExosDuTheme.map(ex=>`<option value="custom-${ex.ID}">⭐ ${ex.Nom} (personnalisé)</option>`).join('');
   }
-  themeSelect.innerHTML = opts || '<option value="">Aucun thème disponible pour ce chapitre</option>';
+  leconSelect.innerHTML = opts || '<option value="">Aucun leçon disponible pour ce thème</option>';
 }
 function deleteSeanceUI(id){
   if(!confirm("Supprimer cette séance ? Tous les résultats enregistrés pour cette séance seront également supprimés définitivement.")) return;
@@ -3782,81 +3818,84 @@ function deleteSeanceUI(id){
 }
 function createSeanceUI(){
   const date = document.getElementById('new-seance-date').value;
-  const chapitreId = document.getElementById('new-seance-chapitre').value;
   const themeId = document.getElementById('new-seance-theme').value;
+  const leconId = document.getElementById('new-seance-lecon').value;
   const numero = document.getElementById('new-seance-numero').value;
   const titre = document.getElementById('new-seance-titre').value || ('Séance du '+date);
   const carnetActif = document.getElementById('new-seance-carnet').checked;
   const evaluationFinale = document.getElementById('new-seance-eval').checked;
   if(!date) return alert('Choisissez une date');
   if(!numero) return alert('Indiquez un numéro de séance');
-  createSeance(date, chapitreId, themeId, titre, numero, carnetActif, evaluationFinale)
+  createSeance(date, themeId, leconId, titre, numero, carnetActif, evaluationFinale)
     .then(()=>{ renderAdminSeances(document.getElementById('admin-content')); }).catch(gsFail);
 }
 
-function chapitreOptionsHtml(selectedValue){
-  let opts = getChapitresAffiches().map(ch=>`<option value="${ch.id}" ${String(selectedValue)===String(ch.id)?'selected':''}>Chapitre ${ch.id} — ${ch.nom}</option>`).join('');
-  if(CUSTOM_CHAPITRES_CACHE.length){
-    opts += CUSTOM_CHAPITRES_CACHE.map(ch=>`<option value="${ch.ID}" ${selectedValue===ch.ID?'selected':''}>📁 ${ch.Nom} (personnalisé)</option>`).join('');
+function themeOptionsHtml(selectedValue){
+  let opts = getThemesAffiches().map(ch=>`<option value="${ch.id}" ${String(selectedValue)===String(ch.id)?'selected':''}>Thème ${ch.id} — ${ch.nom}</option>`).join('');
+  if(CUSTOM_THEMES_CACHE.length){
+    opts += CUSTOM_THEMES_CACHE.map(ch=>`<option value="${ch.ID}" ${selectedValue===ch.ID?'selected':''}>📁 ${ch.Nom} (personnalisé)</option>`).join('');
   }
   return opts;
 }
 
 // ------------------------------------------------------------
-// MENU NAVIGABLE DE LA BANQUE (admin) — chapitre puis thème,
+// MENU NAVIGABLE DE LA BANQUE (admin) — thème puis leçon,
 // pour s'y retrouver facilement au lieu d'un long défilement.
 // ------------------------------------------------------------
-let ADMIN_BANQUE_CHAPITRE = null; // id de chapitre intégré (nombre) ou personnalisé (chaîne Firestore), ou null
-let ADMIN_BANQUE_THEME = null;    // themeId (ex : "1-1" ou "custom-XXXX"), ou null
+let ADMIN_BANQUE_THEME = null; // id de thème intégré (nombre) ou personnalisé (chaîne Firestore), ou null
+let ADMIN_BANQUE_LECON = null;    // leconId (ex : "1-1" ou "custom-XXXX"), ou null
 let OVERRIDE_IMAGE_DATA = { '1': null, '2': null };
 
 function renderAdminBanqueMenu(){
   const zone = document.getElementById('admin-banque-menu');
   if(!zone) return;
-  if(ADMIN_BANQUE_THEME){
-    zone.innerHTML = adminThemeDetailHtml(ADMIN_BANQUE_THEME);
-    if(String(ADMIN_BANQUE_THEME).startsWith('theme-perso')){
+  if(ADMIN_BANQUE_LECON){
+    zone.innerHTML = adminLeconDetailHtml(ADMIN_BANQUE_LECON);
+    if(String(ADMIN_BANQUE_LECON).startsWith('lecon-perso')){
       // Formulaire de création/édition : jamais verrouillé (contrairement à
-      // la surcharge des thèmes intégrés), on déverrouille immédiatement
-      // tous les champs réutilisés de themeEditFormHtml().
+      // la surcharge des leçons intégrés), on déverrouille immédiatement
+      // tous les champs réutilisés de leconEditFormHtml().
       document.querySelectorAll('.ov-field').forEach(el=>{ el.disabled = false; });
       let sa2 = { scoreMode:'direct' };
-      if(ADMIN_BANQUE_THEME !== 'theme-perso-new'){
-        const found = findTheme(ADMIN_BANQUE_THEME);
-        if(found) sa2 = found.theme.sa2;
+      if(ADMIN_BANQUE_LECON !== 'lecon-perso-new'){
+        const found = findLecon(ADMIN_BANQUE_LECON);
+        if(found) sa2 = found.lecon.sa2;
       }
       initOverrideScoreModeUI(sa2);
-    } else if(!String(ADMIN_BANQUE_THEME).startsWith('custom-')){
-      const found = findTheme(ADMIN_BANQUE_THEME);
-      if(found) initOverrideScoreModeUI(found.theme.sa2);
+    } else if(!String(ADMIN_BANQUE_LECON).startsWith('custom-')){
+      const found = findLecon(ADMIN_BANQUE_LECON);
+      if(found) initOverrideScoreModeUI(found.lecon.sa2);
     }
     return;
   }
-  if(ADMIN_BANQUE_CHAPITRE!==null){ zone.innerHTML = adminChapitreThemesHtml(ADMIN_BANQUE_CHAPITRE); return; }
-  zone.innerHTML = adminChapitreListHtml();
+  if(ADMIN_BANQUE_THEME!==null){ zone.innerHTML = adminThemeLeconsHtml(ADMIN_BANQUE_THEME); return; }
+  zone.innerHTML = adminThemeListHtml();
 }
 
-function adminChapitreListHtml(){
+function adminThemeListHtml(){
   let html = '<h2 style="margin-top:0;">📚 Parcourir la banque</h2><div style="display:flex; flex-direction:column; gap:8px;">';
-  getChapitresAffiches().forEach(ch=>{
-    html += `<div class="card" style="margin:0;">
+  getThemesAffiches().forEach(ch=>{
+    html += `<div class="card" style="margin:0; border-left:5px solid ${ch.couleur};">
       <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
-        <span style="cursor:pointer; flex:1;" onclick="ADMIN_BANQUE_CHAPITRE=${ch.id}; renderAdminBanqueMenu();">
-          <strong>Chapitre ${ch.id} — ${ch.nom}</strong> <span class="sub">(${ch.themes.length} thèmes)</span>
+        <span style="cursor:pointer; flex:1; display:flex; align-items:center;" onclick="ADMIN_BANQUE_THEME=${ch.id}; renderAdminBanqueMenu();">
+          ${pastilleTheme(ch.id)}<strong>Thème ${ch.id} — ${ch.nom}</strong> <span class="sub">&nbsp;(${ch.lecons.length} leçons)</span>
         </span>
-        <span class="link" onclick="renommerChapitreIntegreUI(${ch.id}, '${ch.nom.replace(/'/g,"\\'")}')">renommer</span>
-        <span class="link" onclick="supprimerChapitreIntegreUI(${ch.id})">masquer</span>
+        <span class="link" onclick="changerCouleurThemeUI(${ch.id})">couleur</span>
+        <span class="link" onclick="renommerThemeIntegreUI(${ch.id}, '${ch.nom.replace(/'/g,"\\'")}')">renommer</span>
+        <span class="link" onclick="supprimerThemeIntegreUI(${ch.id})">masquer</span>
       </div>
     </div>`;
   });
-  CUSTOM_CHAPITRES_CACHE.forEach(ch=>{
-    const count = CUSTOM_EXERCICES_CACHE.filter(ex=>ex.ChapitreID===ch.ID).length;
-    html += `<div class="card" style="margin:0; border-color:var(--orange);">
+  CUSTOM_THEMES_CACHE.forEach(ch=>{
+    const count = CUSTOM_EXERCICES_CACHE.filter(ex=>ex.ThemeID===ch.ID).length;
+    const coul = ch.Couleur || COULEUR_THEME_PAR_DEFAUT;
+    html += `<div class="card" style="margin:0; border-left:5px solid ${coul}; border-color:var(--orange);">
       <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
-        <span style="cursor:pointer; flex:1;" onclick="ADMIN_BANQUE_CHAPITRE='${ch.ID}'; renderAdminBanqueMenu();">
-          <strong>📁 ${ch.Nom}</strong> <span class="sub">(${count} exercice(s) personnalisé(s))</span>
+        <span style="cursor:pointer; flex:1; display:flex; align-items:center;" onclick="ADMIN_BANQUE_THEME='${ch.ID}'; renderAdminBanqueMenu();">
+          ${pastilleTheme(ch.ID)}<strong>📁 ${ch.Nom}</strong> <span class="sub">&nbsp;(${count} exercice(s) personnalisé(s))</span>
         </span>
-        <span class="link" onclick="supprimerChapitreUI('${ch.ID}')">supprimer</span>
+        <span class="link" onclick="changerCouleurThemeUI('${ch.ID}')">couleur</span>
+        <span class="link" onclick="supprimerThemeUI('${ch.ID}')">supprimer</span>
       </div>
     </div>`;
   });
@@ -3864,84 +3903,41 @@ function adminChapitreListHtml(){
   return html;
 }
 
-function renommerChapitreIntegreUI(chapitreId, nomActuel){
-  const nouveau = prompt("Nouveau nom du chapitre :", nomActuel);
-  if(!nouveau || !nouveau.trim()) return;
-  saveChapitreOverride(chapitreId, { Nom: nouveau.trim() }).then(()=> rafraichirChapitreOverrides()).then(()=>{
-    renderAdminBanqueMenu();
-  }).catch(gsFail);
-}
-
-function supprimerChapitreIntegreUI(chapitreId){
-  if(!confirm("Masquer ce chapitre du programme d'origine ? Il n'apparaîtra plus nulle part (banque, création de séance), mais les données existantes ne seront pas supprimées. Vous pourrez le réafficher plus tard en me le demandant.")) return;
-  saveChapitreOverride(chapitreId, { Supprime: true }).then(()=> rafraichirChapitreOverrides()).then(()=>{
-    renderAdminBanqueMenu();
-  }).catch(gsFail);
-}
-
-function adminChapitreThemesHtml(chapitreId){
-  let html = `<p class="link" onclick="ADMIN_BANQUE_CHAPITRE=null; renderAdminBanqueMenu();">&larr; retour aux chapitres</p>`;
-  const builtIn = CHAPITRES.find(c=>c.id===chapitreId);
-  if(builtIn){
-    const chAffiche = getChapitresAffiches().find(c=>c.id===chapitreId);
-    html += `<h2 style="margin-top:0;">Chapitre ${builtIn.id} — ${chAffiche?chAffiche.nom:builtIn.nom}</h2><div style="display:flex; flex-direction:column; gap:8px;">`;
-    getThemesAffiches(chapitreId).forEach(t=>{
-      html += `<div class="card" style="margin:0;">
-        <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
-          <span style="cursor:pointer; flex:1;" onclick="ADMIN_BANQUE_THEME='${t.id}'; renderAdminBanqueMenu();">
-            <strong>${t.nom}</strong> <span class="sub">(${t.id})</span>
-          </span>
-          <span class="link" onclick="renommerThemeIntegreUI('${t.id}', '${t.nom.replace(/'/g,"\\'")}')">renommer</span>
-          <span class="link" onclick="supprimerThemeIntegreUI('${t.id}')">masquer</span>
-        </div>
-      </div>`;
-    });
-    const customIci = CUSTOM_EXERCICES_CACHE.filter(ex=>String(ex.ChapitreID)===String(chapitreId));
-    customIci.forEach(ex=>{
-      html += `<div class="card" style="cursor:pointer; margin:0; border-color:var(--orange);" onclick="ADMIN_BANQUE_THEME='custom-${ex.ID}'; renderAdminBanqueMenu();">
-        <strong>⭐ ${ex.Nom}</strong> <span class="sub">(personnalisé)</span>
-      </div>`;
-    });
-    const themesPersoIci = THEMES_PERSONNALISES_CACHE.filter(tp=>String(tp.ChapitreID)===String(chapitreId));
-    themesPersoIci.forEach(tp=>{
-      html += `<div class="card" style="cursor:pointer; margin:0; border-color:#7048e8;" onclick="ADMIN_BANQUE_THEME='theme-perso-${tp.ID}'; renderAdminBanqueMenu();">
-        <strong>🧩 ${tp.Nom}</strong> <span class="sub">(thème personnalisé complet)</span>
-      </div>`;
-    });
-    html += `</div>
-      <div class="card center">
-        <button class="btn secondary" onclick="alert('Créez votre exercice via le formulaire tout en haut de cette page, en choisissant ce chapitre dans la liste.')">➕ Ajouter un exercice à ce chapitre</button>
-        <button class="btn secondary" onclick="ADMIN_BANQUE_THEME='theme-perso-new'; renderAdminBanqueMenu();">🧩 Créer un thème personnalisé complet</button>
-      </div>`;
-  } else {
-    const chCustom = CUSTOM_CHAPITRES_CACHE.find(ch=>ch.ID===chapitreId);
-    html += `<h2 style="margin-top:0;">📁 ${chCustom?chCustom.Nom:'Chapitre'}</h2><div style="display:flex; flex-direction:column; gap:8px;">`;
-    const exos = CUSTOM_EXERCICES_CACHE.filter(ex=>ex.ChapitreID===chapitreId);
-    const themesPersoIci = THEMES_PERSONNALISES_CACHE.filter(tp=>tp.ChapitreID===chapitreId);
-    if(!exos.length && !themesPersoIci.length) html += '<p class="sub">Aucun exercice dans ce chapitre pour le moment.</p>';
-    exos.forEach(ex=>{
-      html += `<div class="card" style="cursor:pointer; margin:0; border-color:var(--orange);" onclick="ADMIN_BANQUE_THEME='custom-${ex.ID}'; renderAdminBanqueMenu();">
-        <strong>⭐ ${ex.Nom}</strong>
-      </div>`;
-    });
-    themesPersoIci.forEach(tp=>{
-      html += `<div class="card" style="cursor:pointer; margin:0; border-color:#7048e8;" onclick="ADMIN_BANQUE_THEME='theme-perso-${tp.ID}'; renderAdminBanqueMenu();">
-        <strong>🧩 ${tp.Nom}</strong> <span class="sub">(thème personnalisé complet)</span>
-      </div>`;
-    });
-    html += `</div>
-      <div class="card center">
-        <button class="btn secondary" onclick="alert('Créez votre exercice via le formulaire tout en haut de cette page, en choisissant ce chapitre dans la liste.')">➕ Ajouter un exercice à ce chapitre</button>
-        <button class="btn secondary" onclick="ADMIN_BANQUE_THEME='theme-perso-new'; renderAdminBanqueMenu();">🧩 Créer un thème personnalisé complet</button>
-      </div>`;
-  }
-  return html;
-}
-
 function renommerThemeIntegreUI(themeId, nomActuel){
   const nouveau = prompt("Nouveau nom du thème :", nomActuel);
   if(!nouveau || !nouveau.trim()) return;
-  saveThemeOverride(themeId, { NomTheme: nouveau.trim() }).then(()=> rafraichirThemeOverrides()).then(()=>{
+  saveThemeOverride(themeId, { Nom: nouveau.trim() }).then(()=> rafraichirThemeOverrides()).then(()=>{
+    renderAdminBanqueMenu();
+  }).catch(gsFail);
+}
+
+// Petit sélecteur de couleur rapide : fonctionne aussi bien pour un
+// thème intégré (via themeOverrides.Couleur) que personnalisé (via
+// themesCustom.Couleur) — même palette suggérée dans les deux cas.
+function changerCouleurThemeUI(themeId){
+  const estIntegre = !Number.isNaN(Number(themeId)) && CUSTOM_THEMES_CACHE.every(c=>c.ID!==themeId);
+  const actuelle = couleurTheme(themeId);
+  const palette = ["#d6336c","#4263eb","#0ca678","#ae3ec9","#f59f00","#37b24d","#1098ad","#e64980","#495057","#5c940d"];
+  const swatches = palette.map(c=>`<div onclick="document.getElementById('couleur-choix-input').value='${c}'; document.querySelectorAll('.swatch-couleur').forEach(s=>s.style.outline='none'); this.style.outline='3px solid #222';" class="swatch-couleur" style="width:28px; height:28px; border-radius:6px; background:${c}; cursor:pointer; display:inline-block; margin:2px;"></div>`).join('');
+  const zone = document.createElement('div');
+  zone.innerHTML = `<div class="card" style="position:fixed; top:15%; left:50%; transform:translateX(-50%); z-index:999; max-width:320px; box-shadow:0 4px 20px rgba(0,0,0,.2);">
+    <p style="font-weight:700; margin-top:0;">Couleur du thème</p>
+    <div>${swatches}</div>
+    <input type="color" id="couleur-choix-input" value="${actuelle}" style="width:100%; height:40px; margin-top:10px;">
+    <div class="row" style="margin-top:10px;">
+      <button class="btn secondary" onclick="this.closest('.card').remove()">Annuler</button>
+      <button class="btn" onclick="validerCouleurThemeUI('${themeId}', ${estIntegre})">Valider</button>
+    </div>
+  </div>`;
+  document.body.appendChild(zone.firstElementChild);
+}
+function validerCouleurThemeUI(themeId, estIntegre){
+  const val = document.getElementById('couleur-choix-input').value;
+  const p = estIntegre
+    ? saveThemeOverride(themeId, { Couleur: val }).then(()=> rafraichirThemeOverrides())
+    : updateThemeCustom(themeId, CUSTOM_THEMES_CACHE.find(c=>c.ID===themeId).Nom, val).then(()=> rafraichirThemesCustom());
+  p.then(()=>{
+    document.querySelectorAll('.card').forEach(el=>{ if(el.style.position==='fixed') el.remove(); });
     renderAdminBanqueMenu();
   }).catch(gsFail);
 }
@@ -3953,48 +3949,122 @@ function supprimerThemeIntegreUI(themeId){
   }).catch(gsFail);
 }
 
-function adminThemeDetailHtml(themeId){
-  if(themeId==='theme-perso-new' || String(themeId).startsWith('theme-perso-')){
-    return themePersoFormWrapperHtml(themeId);
+function adminThemeLeconsHtml(themeId){
+  let html = `<p class="link" onclick="ADMIN_BANQUE_THEME=null; renderAdminBanqueMenu();">&larr; retour aux thèmes</p>`;
+  const builtIn = THEMES.find(c=>c.id===themeId);
+  if(builtIn){
+    const chAffiche = getThemesAffiches().find(c=>c.id===themeId);
+    html += `<h2 style="margin-top:0;">Thème ${builtIn.id} — ${chAffiche?chAffiche.nom:builtIn.nom}</h2><div style="display:flex; flex-direction:column; gap:8px;">`;
+    getLeconsAffiches(themeId).forEach(t=>{
+      html += `<div class="card" style="margin:0;">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+          <span style="cursor:pointer; flex:1;" onclick="ADMIN_BANQUE_LECON='${t.id}'; renderAdminBanqueMenu();">
+            <strong>${t.nom}</strong> <span class="sub">(${t.id})</span>
+          </span>
+          <span class="link" onclick="renommerLeconIntegreUI('${t.id}', '${t.nom.replace(/'/g,"\\'")}')">renommer</span>
+          <span class="link" onclick="supprimerLeconIntegreUI('${t.id}')">masquer</span>
+        </div>
+      </div>`;
+    });
+    const customIci = CUSTOM_EXERCICES_CACHE.filter(ex=>String(ex.ThemeID)===String(themeId));
+    customIci.forEach(ex=>{
+      html += `<div class="card" style="cursor:pointer; margin:0; border-color:var(--orange);" onclick="ADMIN_BANQUE_LECON='custom-${ex.ID}'; renderAdminBanqueMenu();">
+        <strong>⭐ ${ex.Nom}</strong> <span class="sub">(personnalisé)</span>
+      </div>`;
+    });
+    const leconsPersoIci = LECONS_PERSONNALISES_CACHE.filter(tp=>String(tp.ThemeID)===String(themeId));
+    leconsPersoIci.forEach(tp=>{
+      html += `<div class="card" style="cursor:pointer; margin:0; border-color:#7048e8;" onclick="ADMIN_BANQUE_LECON='lecon-perso-${tp.ID}'; renderAdminBanqueMenu();">
+        <strong>🧩 ${tp.Nom}</strong> <span class="sub">(leçon personnalisé complet)</span>
+      </div>`;
+    });
+    html += `</div>
+      <div class="card center">
+        <button class="btn secondary" onclick="alert('Créez votre exercice via le formulaire tout en haut de cette page, en choisissant ce thème dans la liste.')">➕ Ajouter un exercice à ce thème</button>
+        <button class="btn secondary" onclick="ADMIN_BANQUE_LECON='lecon-perso-new'; renderAdminBanqueMenu();">🧩 Créer un leçon personnalisé complet</button>
+      </div>`;
+  } else {
+    const chCustom = CUSTOM_THEMES_CACHE.find(ch=>ch.ID===themeId);
+    html += `<h2 style="margin-top:0;">📁 ${chCustom?chCustom.Nom:'Thème'}</h2><div style="display:flex; flex-direction:column; gap:8px;">`;
+    const exos = CUSTOM_EXERCICES_CACHE.filter(ex=>ex.ThemeID===themeId);
+    const leconsPersoIci = LECONS_PERSONNALISES_CACHE.filter(tp=>tp.ThemeID===themeId);
+    if(!exos.length && !leconsPersoIci.length) html += '<p class="sub">Aucun exercice dans ce thème pour le moment.</p>';
+    exos.forEach(ex=>{
+      html += `<div class="card" style="cursor:pointer; margin:0; border-color:var(--orange);" onclick="ADMIN_BANQUE_LECON='custom-${ex.ID}'; renderAdminBanqueMenu();">
+        <strong>⭐ ${ex.Nom}</strong>
+      </div>`;
+    });
+    leconsPersoIci.forEach(tp=>{
+      html += `<div class="card" style="cursor:pointer; margin:0; border-color:#7048e8;" onclick="ADMIN_BANQUE_LECON='lecon-perso-${tp.ID}'; renderAdminBanqueMenu();">
+        <strong>🧩 ${tp.Nom}</strong> <span class="sub">(leçon personnalisé complet)</span>
+      </div>`;
+    });
+    html += `</div>
+      <div class="card center">
+        <button class="btn secondary" onclick="alert('Créez votre exercice via le formulaire tout en haut de cette page, en choisissant ce thème dans la liste.')">➕ Ajouter un exercice à ce thème</button>
+        <button class="btn secondary" onclick="ADMIN_BANQUE_LECON='lecon-perso-new'; renderAdminBanqueMenu();">🧩 Créer un leçon personnalisé complet</button>
+      </div>`;
   }
-  const found = findTheme(themeId);
+  return html;
+}
+
+function renommerLeconIntegreUI(leconId, nomActuel){
+  const nouveau = prompt("Nouveau nom du leçon :", nomActuel);
+  if(!nouveau || !nouveau.trim()) return;
+  saveLeconOverride(leconId, { NomLecon: nouveau.trim() }).then(()=> rafraichirLeconOverrides()).then(()=>{
+    renderAdminBanqueMenu();
+  }).catch(gsFail);
+}
+
+function supprimerLeconIntegreUI(leconId){
+  if(!confirm("Masquer ce leçon du programme d'origine ? Il n'apparaîtra plus nulle part (banque, création de séance), mais les données existantes ne seront pas supprimées. Vous pourrez le réafficher plus tard en me le demandant.")) return;
+  saveLeconOverride(leconId, { Supprime: true }).then(()=> rafraichirLeconOverrides()).then(()=>{
+    renderAdminBanqueMenu();
+  }).catch(gsFail);
+}
+
+function adminLeconDetailHtml(leconId){
+  if(leconId==='lecon-perso-new' || String(leconId).startsWith('lecon-perso-')){
+    return leconPersoFormWrapperHtml(leconId);
+  }
+  const found = findLecon(leconId);
   if(!found) return '<p class="sub">Introuvable.</p>';
-  const { chapitre, theme } = found;
-  const isCustom = String(themeId).startsWith('custom-');
-  let html = `<p class="link" onclick="ADMIN_BANQUE_THEME=null; renderAdminBanqueMenu();">&larr; retour au chapitre</p>
-    <h2 style="margin-top:0;">${theme.nom}</h2>`;
+  const { theme, lecon } = found;
+  const isCustom = String(leconId).startsWith('custom-');
+  let html = `<p class="link" onclick="ADMIN_BANQUE_LECON=null; renderAdminBanqueMenu();">&larr; retour au thème</p>
+    <h2 style="margin-top:0;">${lecon.nom}</h2>`;
 
   if(isCustom){
-    const exId = themeId.replace('custom-','');
-    const estMatch = theme.sa2.but !== '—';
+    const exId = leconId.replace('custom-','');
+    const estMatch = lecon.sa2.but !== '—';
     html += `
       <div class="banniere ${estMatch?'jaune':'orange'}">${estMatch?'🟡 Match à thème':'🟠 Situation décontextualisée'}</div>
-      ${ficheSA(estMatch?theme.sa2:theme.sa1, theme.nom)}
+      ${ficheSA(estMatch?lecon.sa2:lecon.sa1, lecon.nom)}
       <div class="card center">
         <button class="btn secondary" onclick="modifierExerciceUI('${exId}')">✏️ Modifier (formulaire en haut de page)</button>
-        <button class="btn secondary" onclick="supprimerExerciceThemeUI('${exId}')">🗑️ Supprimer</button>
+        <button class="btn secondary" onclick="supprimerExerciceLeconUI('${exId}')">🗑️ Supprimer</button>
       </div>`;
     return html;
   }
 
-  // Thème intégré : édition directe, texte + critère + image + compteur (contenu uniquement)
+  // Leçon intégré : édition directe, texte + critère + image + compteur (contenu uniquement)
   OVERRIDE_IMAGE_DATA = { '1': null, '2': null, 'ref': null }; // réinitialisé : ne contient que les NOUVELLES images choisies
-  const hasOverride = THEME_OVERRIDES_CACHE.some(o=>o.ID===themeId);
-  const diagKindRef = chapitre.reference.diagram ? chapitre.reference.diagram[themeId] : 'full';
-  const schemaActuelRef = chapitre.reference.imageDataRef
-    ? `<img src="${chapitre.reference.imageDataRef}" style="max-width:100%; border-radius:8px;">`
+  const hasOverride = LECON_OVERRIDES_CACHE.some(o=>o.ID===leconId);
+  const diagKindRef = theme.reference.diagram ? theme.reference.diagram[leconId] : 'full';
+  const schemaActuelRef = theme.reference.imageDataRef
+    ? `<img src="${theme.reference.imageDataRef}" style="max-width:100%; border-radius:8px;">`
     : courtDiagram(diagKindRef);
-  html += `${hasOverride ? '<div class="msg" style="background:#fff4e6; color:#e8590c;">Ce thème a été modifié par rapport à sa version d\'origine.</div>' : ''}
+  html += `${hasOverride ? '<div class="msg" style="background:#fff4e6; color:#e8590c;">Ce leçon a été modifié par rapport à sa version d\'origine.</div>' : ''}
     <div class="banniere jaune">🟡 Match à thème</div>
-    ${themeEditFormHtml(themeId, '2', theme.sa2)}
+    ${leconEditFormHtml(leconId, '2', lecon.sa2)}
     <div class="banniere orange">🟠 Situation décontextualisée</div>
-    ${themeEditFormHtml(themeId, '1', theme.sa1)}
+    ${leconEditFormHtml(leconId, '1', lecon.sa1)}
     <div class="banniere bleu">🔵 Situation de référence</div>
     <div class="card">
       <label>But</label>
-      <textarea class="ov-field" id="ov-butref" rows="2" disabled>${(chapitre.reference.but||'').replace(/</g,'&lt;')}</textarea>
+      <textarea class="ov-field" id="ov-butref" rows="2" disabled>${(theme.reference.but||'').replace(/</g,'&lt;')}</textarea>
       <label>Règle spéciale (texte affiché aux élèves)</label>
-      <textarea class="ov-field" id="ov-regle" rows="2" disabled>${(chapitre.reference.regleSpeciale[themeId]||'').replace(/</g,'&lt;')}</textarea>
+      <textarea class="ov-field" id="ov-regle" rows="2" disabled>${(theme.reference.regleSpeciale[leconId]||'').replace(/</g,'&lt;')}</textarea>
       <label>Schéma / image</label>
       <div class="row">
         <div>
@@ -4009,18 +4079,18 @@ function adminThemeDetailHtml(themeId){
       </div>
     </div>
     <div class="card center">
-      <button class="btn secondary" id="btn-modifier-theme" onclick="debloquerEditionThemeUI()">✏️ Modifier l'exercice</button>
-      <button class="btn" id="btn-enregistrer-theme" style="display:none;" onclick="enregistrerSurchargeThemeUI('${themeId}')">✓ Enregistrer les modifications</button>
-      ${hasOverride ? `<button class="btn secondary" id="btn-reinit-theme" onclick="reinitialiserThemeUI('${themeId}')">↺ Réinitialiser à la version d'origine</button>` : ''}
+      <button class="btn secondary" id="btn-modifier-lecon" onclick="debloquerEditionLeconUI()">✏️ Modifier l'exercice</button>
+      <button class="btn" id="btn-enregistrer-lecon" style="display:none;" onclick="enregistrerSurchargeLeconUI('${leconId}')">✓ Enregistrer les modifications</button>
+      ${hasOverride ? `<button class="btn secondary" id="btn-reinit-lecon" onclick="reinitialiserLeconUI('${leconId}')">↺ Réinitialiser à la version d'origine</button>` : ''}
       <div id="ov-msg"></div>
     </div>`;
   return html;
 }
 
-function debloquerEditionThemeUI(){
+function debloquerEditionLeconUI(){
   document.querySelectorAll('.ov-field').forEach(el=>{ el.disabled = false; });
-  const btnModifier = document.getElementById('btn-modifier-theme');
-  const btnEnregistrer = document.getElementById('btn-enregistrer-theme');
+  const btnModifier = document.getElementById('btn-modifier-lecon');
+  const btnEnregistrer = document.getElementById('btn-enregistrer-lecon');
   if(btnModifier) btnModifier.style.display = 'none';
   if(btnEnregistrer) btnEnregistrer.style.display = 'inline-block';
 }
@@ -4071,7 +4141,7 @@ function updateOverrideScoreModeUI(){
   if(!dejaDeverrouille){ zone.querySelectorAll('.ov-field').forEach(el=> el.disabled = true); }
 }
 
-// Initialise le sélecteur de compteur avec le mode/valeurs ACTUELS du thème
+// Initialise le sélecteur de compteur avec le mode/valeurs ACTUELS du leçon
 // (appelé juste après l'insertion du formulaire dans la page).
 function initOverrideScoreModeUI(sa2){
   const sel = document.getElementById('ov-scoremode');
@@ -4103,7 +4173,7 @@ function initOverrideScoreModeUI(sa2){
   }
 }
 
-function themeEditFormHtml(themeId, suffix, sa){
+function leconEditFormHtml(leconId, suffix, sa){
   const esc = s => String(s||'').replace(/</g,'&lt;');
   const schemaActuel = sa.imageData
     ? `<img src="${sa.imageData}" style="max-width:100%; border-radius:8px;">`
@@ -4167,7 +4237,7 @@ function previewOverrideImage(evt, suffix){
   reader.readAsDataURL(file);
 }
 
-function enregistrerSurchargeThemeUI(themeId){
+function enregistrerSurchargeLeconUI(leconId){
   const msg = document.getElementById('ov-msg');
   const val = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
   const data = {
@@ -4213,46 +4283,46 @@ function enregistrerSurchargeThemeUI(themeId){
   }
 
   msg.innerHTML = '<div class="msg">Enregistrement…</div>';
-  saveThemeOverride(themeId, data).then(()=> rafraichirThemeOverrides()).then(()=>{
+  saveLeconOverride(leconId, data).then(()=> rafraichirLeconOverrides()).then(()=>{
     msg.innerHTML = '<div class="msg ok">✅ Modifications enregistrées.</div>';
     renderAdminBanqueMenu();
   }).catch(gsFail);
 }
 
-function reinitialiserThemeUI(themeId){
-  if(!confirm("Réinitialiser ce thème à sa version d'origine ? Toutes vos modifications seront perdues.")) return;
-  resetThemeOverride(themeId).then(()=> rafraichirThemeOverrides()).then(()=>{
+function reinitialiserLeconUI(leconId){
+  if(!confirm("Réinitialiser ce leçon à sa version d'origine ? Toutes vos modifications seront perdues.")) return;
+  resetLeconOverride(leconId).then(()=> rafraichirLeconOverrides()).then(()=>{
     renderAdminBanqueMenu();
   }).catch(gsFail);
 }
 
 /* ============================================================
-   THÈMES PERSONNALISÉS COMPLETS — création / édition
-   Réutilise volontairement themeEditFormHtml() / updateOverrideScoreModeUI()
+   LEÇONS PERSONNALISÉS COMPLETS — création / édition
+   Réutilise volontairement leconEditFormHtml() / updateOverrideScoreModeUI()
    / initOverrideScoreModeUI() (mêmes champs "ov-..." que la surcharge des
-   thèmes intégrés), mais en mode toujours déverrouillé : il ne s'agit pas
-   d'une surcharge d'un thème existant, mais d'un thème autonome créé de
-   toutes pièces, au même niveau qu'un thème intégré.
+   leçons intégrés), mais en mode toujours déverrouillé : il ne s'agit pas
+   d'une surcharge d'un leçon existant, mais d'un leçon autonome créé de
+   toutes pièces, au même niveau qu'un leçon intégré.
    ============================================================ */
-function themePersoFormWrapperHtml(themeId){
-  const isNew = themeId === 'theme-perso-new';
+function leconPersoFormWrapperHtml(leconId){
+  const isNew = leconId === 'lecon-perso-new';
   const vide2 = { niveaux:[], but:'', amenagement:'', consignes:'', criteres:'', variables:{moins:'',plus:''}, diagram:'full', scoreMode:'direct', objectifCroise:'' };
   const vide1 = { niveaux:[], but:'', amenagement:'', consignes:'', criteres:'', variables:{moins:'',plus:''}, diagram:'full' };
   let sa1 = vide1, sa2 = vide2, nomActuel = '', refBut = '', refRegle = '', refImg = null;
-  let chapitreIdActuel = ADMIN_BANQUE_CHAPITRE, docId = '';
+  let themeIdActuel = ADMIN_BANQUE_THEME, docId = '';
 
   if(!isNew){
-    const tpId = themeId.replace('theme-perso-','');
-    const doc = THEMES_PERSONNALISES_CACHE.find(t=>t.ID===tpId);
+    const tpId = leconId.replace('lecon-perso-','');
+    const doc = LECONS_PERSONNALISES_CACHE.find(t=>t.ID===tpId);
     if(!doc) return '<p class="sub">Introuvable.</p>';
-    const found = findTheme(themeId);
-    sa1 = found.theme.sa1.but==='—' ? vide1 : found.theme.sa1;
-    sa2 = found.theme.sa2.but==='—' ? vide2 : found.theme.sa2;
+    const found = findLecon(leconId);
+    sa1 = found.lecon.sa1.but==='—' ? vide1 : found.lecon.sa1;
+    sa2 = found.lecon.sa2.but==='—' ? vide2 : found.lecon.sa2;
     nomActuel = doc.Nom || '';
     refBut = doc.ButReference || '';
     refRegle = doc.RegleSpeciale || '';
     refImg = doc.ImageDataRef || null;
-    chapitreIdActuel = doc.ChapitreID;
+    themeIdActuel = doc.ThemeID;
     docId = doc.ID;
   }
 
@@ -4260,18 +4330,18 @@ function themePersoFormWrapperHtml(themeId){
   OVERRIDE_IMAGE_DATA = { '1': null, '2': null, 'ref': null };
 
   const esc = s => String(s||'').replace(/</g,'&lt;');
-  let html = `<p class="link" onclick="ADMIN_BANQUE_THEME=null; renderAdminBanqueMenu();">&larr; retour au chapitre</p>
-    <h2 style="margin-top:0;">${isNew ? '➕ Nouveau thème personnalisé complet' : '🧩 '+esc(nomActuel)}</h2>
+  let html = `<p class="link" onclick="ADMIN_BANQUE_LECON=null; renderAdminBanqueMenu();">&larr; retour au thème</p>
+    <h2 style="margin-top:0;">${isNew ? '➕ Nouveau leçon personnalisé complet' : '🧩 '+esc(nomActuel)}</h2>
     <div class="card">
-      <label>Nom du thème</label>
+      <label>Nom du leçon</label>
       <input id="ov-tp-nom" value="${esc(nomActuel)}">
-      <label>Chapitre</label>
-      <select id="ov-tp-chapitre">${chapitreOptionsHtml(chapitreIdActuel)}</select>
+      <label>Thème</label>
+      <select id="ov-tp-theme">${themeOptionsHtml(themeIdActuel)}</select>
     </div>
     <div class="banniere jaune">🟡 Match à thème</div>
-    ${themeEditFormHtml(themeId, '2', sa2)}
+    ${leconEditFormHtml(leconId, '2', sa2)}
     <div class="banniere orange">🟠 Situation décontextualisée</div>
-    ${themeEditFormHtml(themeId, '1', sa1)}
+    ${leconEditFormHtml(leconId, '1', sa1)}
     <div class="banniere bleu">🔵 Situation de référence</div>
     <div class="card">
       <label>But</label>
@@ -4292,24 +4362,24 @@ function themePersoFormWrapperHtml(themeId){
       </div>
     </div>
     <div class="card center">
-      <button class="btn" onclick="enregistrerThemePersonaliseUI('${docId}')">✓ ${isNew?'Créer le thème':'Enregistrer les modifications'}</button>
-      ${!isNew ? `<button class="btn secondary" onclick="supprimerThemePersonaliseUI('${docId}')">🗑️ Supprimer</button>` : ''}
+      <button class="btn" onclick="enregistrerLeconPersonaliseUI('${docId}')">✓ ${isNew?'Créer le leçon':'Enregistrer les modifications'}</button>
+      ${!isNew ? `<button class="btn secondary" onclick="supprimerLeconPersonaliseUI('${docId}')">🗑️ Supprimer</button>` : ''}
       <div id="ov-msg"></div>
     </div>`;
   return html;
 }
 
-function enregistrerThemePersonaliseUI(id){
+function enregistrerLeconPersonaliseUI(id){
   const msg = document.getElementById('ov-msg');
   const val = elId => { const el = document.getElementById(elId); return el ? el.value.trim() : ''; };
   const nom = val('ov-tp-nom');
-  const chapitreEl = document.getElementById('ov-tp-chapitre');
-  const chapitreId = chapitreEl ? chapitreEl.value : '';
-  if(!nom) return alert('Indiquez un nom pour ce thème.');
-  if(!chapitreId) return alert('Choisissez un chapitre.');
+  const themeEl = document.getElementById('ov-tp-theme');
+  const themeId = themeEl ? themeEl.value : '';
+  if(!nom) return alert('Indiquez un nom pour ce leçon.');
+  if(!themeId) return alert('Choisissez un thème.');
 
   const data = {
-    Nom: nom, ChapitreID: chapitreId,
+    Nom: nom, ThemeID: themeId,
     But1: val('ov-but1'), Amenagement1: val('ov-amenagement1'), Consignes1: val('ov-consignes1'),
     Criteres1: val('ov-criteres1'), VariablesMoins1: val('ov-varmoins1'), VariablesPlus1: val('ov-varplus1'),
     But2: val('ov-but2'), Amenagement2: val('ov-amenagement2'), Consignes2: val('ov-consignes2'),
@@ -4349,26 +4419,26 @@ function enregistrerThemePersonaliseUI(id){
   }
 
   msg.innerHTML = '<div class="msg">Enregistrement…</div>';
-  const p = id ? updateThemePersonnalise(id, data) : createThemePersonnalise(data);
-  p.then(()=> rafraichirThemesPersonnalises()).then(()=>{
+  const p = id ? updateLeconPersonnalise(id, data) : createLeconPersonnalise(data);
+  p.then(()=> rafraichirLeconsPersonnalises()).then(()=>{
     msg.innerHTML = '<div class="msg ok">✅ Enregistré.</div>';
-    ADMIN_BANQUE_THEME = null;
+    ADMIN_BANQUE_LECON = null;
     renderAdminBanqueMenu();
   }).catch(gsFail);
 }
 
-function supprimerThemePersonaliseUI(id){
-  if(!confirm('Supprimer ce thème personnalisé complet ?')) return;
-  deleteThemePersonnalise(id).then(()=> rafraichirThemesPersonnalises()).then(()=>{
-    ADMIN_BANQUE_THEME = null;
+function supprimerLeconPersonaliseUI(id){
+  if(!confirm('Supprimer ce leçon personnalisé complet ?')) return;
+  deleteLeconPersonnalise(id).then(()=> rafraichirLeconsPersonnalises()).then(()=>{
+    ADMIN_BANQUE_LECON = null;
     renderAdminBanqueMenu();
   }).catch(gsFail);
 }
 
-function supprimerExerciceThemeUI(id){
+function supprimerExerciceLeconUI(id){
   if(!confirm('Supprimer cet exercice personnalisé ?')) return;
   deleteExerciceCustom(id).then(()=>{
-    ADMIN_BANQUE_THEME = null;
+    ADMIN_BANQUE_LECON = null;
     return rafraichirExercicesCustom();
   }).then(()=>{
     renderAdminBanqueMenu();
@@ -4379,11 +4449,12 @@ function supprimerExerciceThemeUI(id){
 function renderAdminBanque(c){
   let html = `
     <div class="card">
-      <h2 style="margin-top:0;">📁 Chapitres personnalisés</h2>
-      <p class="sub">Pour organiser vos exercices en dehors des 4 chapitres du programme d'origine.</p>
+      <h2 style="margin-top:0;">📁 Thèmes personnalisés</h2>
+      <p class="sub">Pour organiser vos exercices en dehors des 4 thèmes du programme d'origine.</p>
       <div class="row">
         <div style="flex:2;"><input id="chap-nom" placeholder="Ex : Jeu de volant, Double..."></div>
-        <div><button class="btn secondary" onclick="creerChapitreUI()">+ Créer</button></div>
+        <div style="flex:0 0 60px;"><label>Couleur</label><input type="color" id="chap-couleur" value="${couleurThemeCustomParDefaut()}" style="padding:2px; height:44px;"></div>
+        <div><button class="btn secondary" onclick="creerThemeUI()">+ Créer</button></div>
       </div>
       <div id="chap-liste" class="sub">Chargement…</div>
     </div>
@@ -4393,7 +4464,7 @@ function renderAdminBanque(c){
       <label>Nom de l'exercice</label>
       <input id="ex-nom" placeholder="Ex : Amortis croisés">
       <div class="row">
-        <div><label>Chapitre</label><select id="ex-chapitre">${chapitreOptionsHtml()}</select></div>
+        <div><label>Thème</label><select id="ex-theme">${themeOptionsHtml()}</select></div>
         <div><label>Type</label>
           <select id="ex-type" onchange="updateExerciceTypeUI()">
             <option value="match">Match à thème (avec compteur)</option>
@@ -4433,42 +4504,44 @@ function renderAdminBanque(c){
     <div id="admin-banque-menu"></div>`;
   c.innerHTML = html;
   updateExerciceTypeUI();
-  chargerListeChapitresCustom();
+  chargerListeThemesCustom();
   chargerListeExercicesCustom();
-  rafraichirThemesPersonnalises();
-  ADMIN_BANQUE_CHAPITRE = null; ADMIN_BANQUE_THEME = null;
+  rafraichirLeconsPersonnalises();
+  ADMIN_BANQUE_THEME = null; ADMIN_BANQUE_LECON = null;
   renderAdminBanqueMenu();
 }
 
-function chargerListeChapitresCustom(){
-  rafraichirChapitresCustom().then(list=>{
+function chargerListeThemesCustom(){
+  rafraichirThemesCustom().then(list=>{
     const el = document.getElementById('chap-liste');
     if(!el) return;
-    // Le dropdown "Chapitre" du formulaire doit refléter les chapitres à jour
-    const sel = document.getElementById('ex-chapitre');
-    if(sel){ const val = sel.value; sel.innerHTML = chapitreOptionsHtml(val); }
-    if(!list.length){ el.innerHTML = 'Aucun chapitre personnalisé pour le moment.'; return; }
+    // Le dropdown "Thème" du formulaire doit refléter les thèmes à jour
+    const sel = document.getElementById('ex-theme');
+    if(sel){ const val = sel.value; sel.innerHTML = themeOptionsHtml(val); }
+    if(!list.length){ el.innerHTML = 'Aucun thème personnalisé pour le moment.'; return; }
     let html = '<table><tr><th>Nom</th><th></th></tr>';
     list.forEach(ch=>{
-      html += `<tr><td>${ch.Nom}</td><td><span class="link" onclick="supprimerChapitreUI('${ch.ID}')">supprimer</span></td></tr>`;
+      html += `<tr><td>${ch.Nom}</td><td><span class="link" onclick="supprimerThemeUI('${ch.ID}')">supprimer</span></td></tr>`;
     });
     html += '</table>';
     el.innerHTML = html;
   }).catch(gsFail);
 }
 
-function creerChapitreUI(){
+function creerThemeUI(){
   const nom = document.getElementById('chap-nom').value.trim();
   if(!nom) return;
-  createChapitreCustom(nom).then(()=>{
+  const couleurEl = document.getElementById('chap-couleur');
+  const couleur = couleurEl ? couleurEl.value : null;
+  createThemeCustom(nom, couleur).then(()=>{
     document.getElementById('chap-nom').value = '';
-    chargerListeChapitresCustom();
+    chargerListeThemesCustom();
   }).catch(gsFail);
 }
 
-function supprimerChapitreUI(id){
-  if(!confirm("Supprimer ce chapitre personnalisé ? Les exercices déjà créés dedans resteront, mais n'apparaîtront plus regroupés correctement tant qu'ils ne sont pas réattribués à un autre chapitre.")) return;
-  deleteChapitreCustom(id).then(()=>chargerListeChapitresCustom()).catch(gsFail);
+function supprimerThemeUI(id){
+  if(!confirm("Supprimer ce thème personnalisé ? Les exercices déjà créés dedans resteront, mais n'apparaîtront plus regroupés correctement tant qu'ils ne sont pas réattribués à un autre thème.")) return;
+  deleteThemeCustom(id).then(()=>chargerListeThemesCustom()).catch(gsFail);
 }
 
 
@@ -4477,10 +4550,10 @@ function chargerListeExercicesCustom(){
     const el = document.getElementById('ex-liste');
     if(!el) return;
     if(!list.length){ el.innerHTML = '<p class="sub">Aucun exercice personnalisé pour le moment.</p>'; return; }
-    let html = '<strong>Exercices personnalisés existants</strong><table><tr><th>Nom</th><th>Chapitre</th><th>Type</th><th></th></tr>';
+    let html = '<strong>Exercices personnalisés existants</strong><table><tr><th>Nom</th><th>Thème</th><th>Type</th><th></th></tr>';
     list.forEach(ex=>{
-      const ch = findChapitrePourExercice(ex);
-      html += `<tr><td>${ex.Nom}</td><td>${ch?ch.nom:ex.ChapitreID}</td><td>${ex.Type==='match'?'Match à thème':'Décontextualisée'}</td>
+      const ch = findThemePourExercice(ex);
+      html += `<tr><td>${ex.Nom}</td><td>${ch?ch.nom:ex.ThemeID}</td><td>${ex.Type==='match'?'Match à thème':'Décontextualisée'}</td>
         <td><span class="link" onclick="modifierExerciceUI('${ex.ID}')">modifier</span> ·
         <span class="link" onclick="supprimerExerciceUI('${ex.ID}')">supprimer</span></td></tr>`;
     });
@@ -4506,7 +4579,7 @@ function modifierExerciceUI(id){
   document.getElementById('ex-cancel-edit').style.display = 'inline';
 
   document.getElementById('ex-nom').value = ex.Nom || '';
-  document.getElementById('ex-chapitre').innerHTML = chapitreOptionsHtml(ex.ChapitreID);
+  document.getElementById('ex-theme').innerHTML = themeOptionsHtml(ex.ThemeID);
   document.getElementById('ex-type').value = ex.Type || 'match';
   document.getElementById('ex-but').value = ex.But || '';
   document.getElementById('ex-amenagement').value = ex.Amenagement || '';
@@ -4653,7 +4726,7 @@ function creerExerciceUI(){
   const msg = document.getElementById('ex-msg');
   const editId = document.getElementById('ex-edit-id').value;
   const nom = document.getElementById('ex-nom').value.trim();
-  const chapitreId = document.getElementById('ex-chapitre').value; // reste une chaîne : peut être "1"-"4" (intégré) ou un ID Firestore (personnalisé)
+  const themeId = document.getElementById('ex-theme').value; // reste une chaîne : peut être "1"-"4" (intégré) ou un ID Firestore (personnalisé)
   const type = document.getElementById('ex-type').value;
   const but = document.getElementById('ex-but').value.trim();
   const amenagement = document.getElementById('ex-amenagement').value.trim();
@@ -4699,7 +4772,7 @@ function creerExerciceUI(){
   }
 
   const ex = {
-    Nom: nom, ChapitreID: chapitreId, Type: type,
+    Nom: nom, ThemeID: themeId, Type: type,
     But: but, Amenagement: amenagement, Consignes: consignes, CriteresTexte: criteres,
     VariablesMoins: varMoins || '—', VariablesPlus: varPlus || '—',
     ImageData: EX_IMAGE_DATA || '',
@@ -4717,7 +4790,13 @@ function creerExerciceUI(){
 }
 
 function renderAdminSuivi(c){
-  c.innerHTML = `<div class="card center">
+  c.innerHTML = `<div class="card" style="border-color:#c92a2a; background:#fff5f5;">
+      <p style="margin:0 0 8px; font-weight:700; color:#c92a2a;">⚠️ Migration ponctuelle — renommage Chapitre→Thème / Thème→Leçon</p>
+      <p class="sub" style="margin:0 0 10px;">Cette mise à jour renomme les collections/champs Firestore pour refléter la nouvelle terminologie. <strong>À lancer UNE SEULE FOIS</strong>, juste après avoir mis à jour les règles de sécurité Firestore (voir le message fourni avec cette livraison), avant de reprendre une utilisation normale. Sans risque pour les données déjà migrées si on la relance par erreur (les écritures utilisent <code>merge:true</code>), mais évitez de l'interrompre en cours de route (ne fermez pas l'onglet).</p>
+      <button class="btn" style="background:#c92a2a;" id="btn-migration-lecon" onclick="migrerRenommageThemeLeconUI()">🔄 Lancer la migration</button>
+      <div id="migration-msg" class="sub" style="margin-top:8px;"></div>
+    </div>
+    <div class="card center">
       <button class="btn secondary" onclick="exportCSV()">⬇ Exporter les résultats (AFL1) en CSV</button>
       <button class="btn secondary" onclick="exportCarnetCSV()">⬇ Exporter le carnet (AFL2) en CSV</button>
       <button class="btn secondary" onclick="exportRolesCSV()">⬇ Exporter les rôles (AFL3) en CSV</button>
@@ -4738,7 +4817,7 @@ function renderAdminSuivi(c){
     </div>
     <div class="card" style="border-color:#e8590c;">
       <p style="margin:0 0 8px; font-weight:700;">🧪 Outils de test (données fictives)</p>
-      <p class="sub" style="margin:0 0 10px;">Génère 30 élèves préfixés "TEST-" + 15 séances (L1-L5 classiques, L6-L13 carnet actif, L14-L15 évaluation finale) avec résultats, carnets, rôles et temps morts fictifs mais variés — pour valider l'admin (Bilan CCF, exports, classements) à l'échelle, sans toucher à tes vraies données. Nécessite qu'au moins un chapitre/thème existe déjà.</p>
+      <p class="sub" style="margin:0 0 10px;">Génère 30 élèves préfixés "TEST-" + 15 séances (L1-L5 classiques, L6-L13 carnet actif, L14-L15 évaluation finale) avec résultats, carnets, rôles et temps morts fictifs mais variés — pour valider l'admin (Bilan CCF, exports, classements) à l'échelle, sans toucher à tes vraies données. Nécessite qu'au moins un thème/leçon existe déjà.</p>
       <button class="btn secondary" id="btn-generer-test" onclick="genererDonneesTestUI()">🧪 Générer un jeu de données de test</button>
       <button class="btn secondary" id="btn-supprimer-test" onclick="supprimerDonneesTestUI()">🗑️ Supprimer toutes les données TEST-</button>
       <div id="test-tools-msg" class="sub" style="margin-top:8px;"></div>
@@ -4760,7 +4839,7 @@ function renderAdminSuivi(c){
     let html = statsBlockHtml(rows, 'var(--bleu)', 'objectifs atteints, toute la classe');
 
     // Détail individuel par élève : reporté de séance en séance, avec
-    // pourcentage de victoires et répartition par chapitre.
+    // pourcentage de victoires et répartition par thème.
     const parEleveRows = {};
     rows.forEach(r=>{
       if(!parEleveRows[r.NomEleve]) parEleveRows[r.NomEleve] = [];
@@ -4771,8 +4850,8 @@ function renderAdminSuivi(c){
       const eRows = parEleveRows[nom];
       const stats = computeStats(eRows);
       const win = computeWinRate(eRows);
-      const chapitreDetail = Object.keys(stats.parChapitre).map(chNom=>{
-        const d = stats.parChapitre[chNom];
+      const themeDetail = Object.keys(stats.parTheme).map(chNom=>{
+        const d = stats.parTheme[chNom];
         const pct = d.withObj ? Math.round(100*d.reussis/d.withObj) : 0;
         return `${chNom} : ${pct}% (${d.reussis}/${d.withObj})`;
       }).join(' · ');
@@ -4782,17 +4861,17 @@ function renderAdminSuivi(c){
           <div style="flex:1;">${statBar('Objectifs atteints', stats.pctGlobal, `${stats.reussisCount}/${stats.withObjCount}`, 'var(--vert)')}</div>
           <div style="flex:1;">${statBar('Victoires en match', win.pct, `${win.wins}/${win.total}`, 'var(--jaune)')}</div>
         </div>
-        ${chapitreDetail ? `<div class="sub" style="margin-top:2px;">${chapitreDetail}</div>` : ''}
+        ${themeDetail ? `<div class="sub" style="margin-top:2px;">${themeDetail}</div>` : ''}
         ${echauffementStatsHtml(eRows)}
       </div>`;
     });
 
-    html += '<h2 style="margin:16px 0 6px;">Détail des résultats</h2><table><tr><th>Date</th><th>Élève</th><th>Thème</th><th>Phase</th><th>Détail</th><th>Résultat</th></tr>';
+    html += '<h2 style="margin:16px 0 6px;">Détail des résultats</h2><table><tr><th>Date</th><th>Élève</th><th>Leçon</th><th>Phase</th><th>Détail</th><th>Résultat</th></tr>';
     rows.sort((a,b)=> new Date(b.DateSeance)-new Date(a.DateSeance));
     rows.forEach(r=>{
-      const t = findTheme(r.ThemeID);
-      const nomTheme = t ? t.theme.nom : (r.ThemeID==='echauffement'?'Échauffement':r.ThemeID);
-      html += `<tr><td>${r.DateSeance||''}</td><td>${r.NomEleve}</td><td>${nomTheme}</td>
+      const t = findLecon(r.LeconID);
+      const nomLecon = t ? t.lecon.nom : (r.LeconID==='echauffement'?'Échauffement':r.LeconID);
+      html += `<tr><td>${r.DateSeance||''}</td><td>${r.NomEleve}</td><td>${nomLecon}</td>
         <td>${r.Phase}</td><td>${r.Detail||''}</td><td>${resultatBadge(r)}</td></tr>`;
     });
     html += '</table>';
@@ -4827,8 +4906,8 @@ function bilanCCFHtml(eleve, resultatRows, carnetRows, seances, tempsMortsAll){
   const winGlobal = computeWinRate(resultatRows);
   const rowsEval = resultatRows.filter(r=>r.EvaluationFinaleSeance);
   const winEval = computeWinRate(rowsEval);
-  const chapitreDetail = Object.keys(stats.parChapitre).map(chNom=>{
-    const d = stats.parChapitre[chNom];
+  const themeDetail = Object.keys(stats.parTheme).map(chNom=>{
+    const d = stats.parTheme[chNom];
     const pct = d.withObj ? Math.round(100*d.reussis/d.withObj) : 0;
     return `${chNom} : ${pct}% (${d.reussis}/${d.withObj})`;
   }).join(' · ');
@@ -4853,13 +4932,13 @@ function bilanCCFHtml(eleve, resultatRows, carnetRows, seances, tempsMortsAll){
     <div class="row" style="margin-top:4px;">
       <div style="flex:1;">${statBar('🎓 Victoires en évaluation finale', winEval.pct, `${winEval.wins}/${winEval.total}`, 'var(--orange)')}</div>
     </div>
-    ${chapitreDetail ? `<p class="sub" style="margin-top:6px;">${chapitreDetail}</p>` : '<p class="sub">Aucun résultat par chapitre pour l\'instant.</p>'}
+    ${themeDetail ? `<p class="sub" style="margin-top:6px;">${themeDetail}</p>` : '<p class="sub">Aucun résultat par thème pour l\'instant.</p>'}
 
     <h3 style="margin:18px 0 8px;">🅱️ AFL2 — Carnet d'entraînement</h3>
     <p class="sub" style="margin:0 0 8px;">Régularité : ${regulariteCarnet===null ? 'aucune séance carnet proposée pour l\'instant' : `${carnetTries.length}/${seancesCarnet.length} séances remplies (${regulariteCarnet}%)`}</p>
     ${carnetTries.length ? carnetTries.map(ct=>`
       <div class="sub" style="border-left:3px solid #7048e8; padding-left:8px; margin-bottom:6px;">
-        <strong>${(ct.Horodatage||'').slice(0,10)}</strong> — objectif : ${ct.ObjectifThemeNom || ct.ObjectifThemeID}
+        <strong>${(ct.Horodatage||'').slice(0,10)}</strong> — objectif : ${ct.ObjectifLeconNom || ct.ObjectifLeconID}
         ${ct.Bilan ? `<br>Bilan : ${ct.Bilan.replace(/</g,'&lt;')}` : ''}
       </div>`).join('') : '<p class="sub">Aucune entrée de carnet pour l\'instant.</p>'}
 
@@ -4883,7 +4962,7 @@ function nettoyerOrphelinsUI(){
 function exportCSV(){
   const rows = window._suiviData || [];
   if(!rows.length) return alert('Aucune donnée à exporter.');
-  const headers = ['DateSeance','NomEleve','ThemeID','Phase','Detail','Score','ObjectifAtteint','Victoire'];
+  const headers = ['DateSeance','NomEleve','LeconID','Phase','Detail','Score','ObjectifAtteint','Victoire'];
   let csv = headers.join(';')+'\n';
   rows.forEach(r=>{ csv += headers.map(h=>String(r[h]||'').replace(/;/g,',').replace(/\r?\n/g,' ')).join(';')+'\n'; });
   const blob = new Blob(['\ufeff'+csv], {type:'text/csv;charset=utf-8;'});
@@ -4909,9 +4988,9 @@ function exportCarnetCSV(){
     const eleveNom = {}; eleves.forEach(e=>eleveNom[e.ID]=e.Nom);
     const rows = entries.map(e=>({
       Date: (e.Horodatage||'').slice(0,10), Eleve: eleveNom[e.EleveID]||e.EleveID,
-      ObjectifThemeNom: e.ObjectifThemeNom||'', Bilan: e.Bilan||'', SeanceID: e.SeanceID||''
+      ObjectifLeconNom: e.ObjectifLeconNom||'', Bilan: e.Bilan||'', SeanceID: e.SeanceID||''
     }));
-    telechargerCSV_('carnet_afl2_badminton.csv', ['Date','Eleve','ObjectifThemeNom','Bilan','SeanceID'], rows);
+    telechargerCSV_('carnet_afl2_badminton.csv', ['Date','Eleve','ObjectifLeconNom','Bilan','SeanceID'], rows);
   }).catch(gsFail);
 }
 
@@ -4967,7 +5046,7 @@ async function calculerSyntheseClasse(){
       pctObjectifs: Math.round(stats.pctGlobal),
       pctVictoiresEval: winEval.total ? Math.round(winEval.pct) : null,
       pctRegularite: regularite,
-      dernierObjectifNom: dernierObjectif ? (dernierObjectif.ObjectifThemeNom||dernierObjectif.ObjectifThemeID) : '',
+      dernierObjectifNom: dernierObjectif ? (dernierObjectif.ObjectifLeconNom||dernierObjectif.ObjectifLeconID) : '',
       rolesTxt: roles.map(r=>rolesLabels[r]||r).join(' + '),
       nbTempsMorts: mesTempsMorts.length
     };
@@ -5056,19 +5135,193 @@ async function fetchToutBrut_(collection){
   const snap = await db.collection(collection).get();
   return snap.docs.map(d=>({ ID:d.id, ...d.data() }));
 }
+async function fetchToutBrutSafe_(collection){
+  // Comme fetchToutBrut_, mais tolère une collection absente/vide sans planter
+  // (utile pour une migration qui peut être relancée, ou une base toute neuve).
+  try { return await fetchToutBrut_(collection); } catch(e){ return []; }
+}
+async function executerEcrituresAvecIdParLots_(items){
+  // items: [{col, id, data}] — écrit CHAQUE document sous l'ID EXACT fourni
+  // (contrairement à executerEcrituresParLots_ qui génère un ID auto), avec
+  // merge:true pour pouvoir relancer la migration sans risque de doublon.
+  const CHUNK = 450;
+  for(let i=0;i<items.length;i+=CHUNK){
+    const batch = db.batch();
+    items.slice(i, i+CHUNK).forEach(it=>{ batch.set(db.collection(it.col).doc(String(it.id)), it.data, { merge:true }); });
+    await batch.commit();
+  }
+}
+
+// ============================================================
+// MIGRATION PONCTUELLE — renommage Chapitre→Thème / Thème→Leçon
+// ------------------------------------------------------------
+// L'application a été renommée en profondeur (voir la session de
+// juillet 2026) : l'ancien "chapitre" (le conteneur, ex. "Le
+// service") s'appelle maintenant "thème", et l'ancien "thème" (la
+// leçon avec ses 3 situations orange/jaune/bleu) s'appelle
+// maintenant "leçon". Les collections/champs Firestore ont suivi :
+//   chapitresCustom      -> themesCustom
+//   chapitreOverrides    -> themeOverrides      (même nom, sens différent !)
+//   themeOverrides (anc.)-> leconOverrides
+//   themesPersonnalises  -> leconsPersonnalises (+ ChapitreID -> ThemeID)
+//   seances.ChapitreID   -> seances.ThemeID
+//   seances.ThemeID (anc.)-> seances.LeconID
+//   resultats.ThemeID (anc.) -> resultats.LeconID
+//   exercices.ChapitreID -> exercices.ThemeID
+//   carnetEntries.ObjectifThemeID/Nom -> ObjectifLeconID/Nom
+//
+// ⚠️ Piège : le nom de collection "themeOverrides" est réutilisé
+// pour un AUTRE sens (surcharges de thème au lieu de surcharges de
+// leçon). Il faut donc migrer son contenu ACTUEL vers "leconOverrides"
+// puis LE VIDER avant d'y écrire les nouvelles surcharges de thème
+// (issues de l'ancien "chapitreOverrides"). D'où l'ordre précis
+// des étapes ci-dessous — ne pas réordonner.
+// ============================================================
+async function migrerRenommageThemeLecon(onProgress){
+  const rapport = [];
+  const p = (txt)=>{ if(onProgress) onProgress(txt); };
+
+  p('Lecture des anciennes collections…');
+  const [chapitreOverridesOld, themeOverridesOld, chapitresCustomOld, themesPersonnalisesOld,
+         seances, resultats, exercices, carnetEntries] = await Promise.all([
+    fetchToutBrutSafe_('chapitreOverrides'),
+    fetchToutBrutSafe_('themeOverrides'),
+    fetchToutBrutSafe_('chapitresCustom'),
+    fetchToutBrutSafe_('themesPersonnalises'),
+    fetchToutBrutSafe_('seances'),
+    fetchToutBrutSafe_('resultats'),
+    fetchToutBrutSafe_('exercices'),
+    fetchToutBrutSafe_('carnetEntries'),
+  ]);
+
+  // 1) Anciens "themeOverrides" (surcharges de LEÇON) -> "leconOverrides"
+  p(`Migration de ${themeOverridesOld.length} surcharge(s) de leçon…`);
+  const itemsLeconOverrides = themeOverridesOld.map(doc=>{
+    const data = Object.assign({}, doc); delete data.ID;
+    if('NomTheme' in data){ data.NomLecon = data.NomTheme; delete data.NomTheme; }
+    return { col:'leconOverrides', id:doc.ID, data };
+  });
+  await executerEcrituresAvecIdParLots_(itemsLeconOverrides);
+  rapport.push(`${themeOverridesOld.length} surcharge(s) de leçon → "leconOverrides"`);
+
+  // 2) On vide l'ancienne collection "themeOverrides" (son nom va être
+  //    réemployé pour un autre sens juste après)
+  if(themeOverridesOld.length){
+    await executerSuppressionsParLots_(themeOverridesOld.map(doc=>({ col:'themeOverrides', id:doc.ID })));
+  }
+
+  // 3) Anciens "chapitreOverrides" (surcharges de THÈME) -> "themeOverrides"
+  p(`Migration de ${chapitreOverridesOld.length} surcharge(s) de thème…`);
+  const itemsThemeOverrides = chapitreOverridesOld.map(doc=>{
+    const data = Object.assign({}, doc); delete data.ID;
+    return { col:'themeOverrides', id:doc.ID, data };
+  });
+  await executerEcrituresAvecIdParLots_(itemsThemeOverrides);
+  rapport.push(`${chapitreOverridesOld.length} surcharge(s) de thème → "themeOverrides"`);
+
+  // 4) chapitresCustom -> themesCustom
+  p(`Migration de ${chapitresCustomOld.length} thème(s) personnalisé(s)…`);
+  const itemsThemesCustom = chapitresCustomOld.map(doc=>{
+    const data = Object.assign({}, doc); delete data.ID;
+    return { col:'themesCustom', id:doc.ID, data };
+  });
+  await executerEcrituresAvecIdParLots_(itemsThemesCustom);
+  rapport.push(`${chapitresCustomOld.length} thème(s) personnalisé(s) → "themesCustom"`);
+
+  // 5) themesPersonnalises -> leconsPersonnalises (+ ChapitreID -> ThemeID)
+  p(`Migration de ${themesPersonnalisesOld.length} leçon(s) personnalisée(s) complète(s)…`);
+  const itemsLeconsPerso = themesPersonnalisesOld.map(doc=>{
+    const data = Object.assign({}, doc); delete data.ID;
+    if('ChapitreID' in data){ data.ThemeID = data.ChapitreID; delete data.ChapitreID; }
+    return { col:'leconsPersonnalises', id:doc.ID, data };
+  });
+  await executerEcrituresAvecIdParLots_(itemsLeconsPerso);
+  rapport.push(`${themesPersonnalisesOld.length} leçon(s) personnalisée(s) complète(s) → "leconsPersonnalises"`);
+
+  // 6) Champs internes sur les collections qui gardent leur nom
+  p(`Mise à jour des champs sur ${seances.length} séance(s)…`);
+  const majSeances = [];
+  seances.forEach(doc=>{
+    const oldChapitreID = doc.ChapitreID, oldThemeID = doc.ThemeID;
+    const upd = {};
+    let touch = false;
+    if(oldChapitreID !== undefined){ upd.ThemeID = oldChapitreID; upd.ChapitreID = firebase.firestore.FieldValue.delete(); touch = true; }
+    if(oldThemeID !== undefined && doc.LeconID === undefined){ upd.LeconID = oldThemeID; touch = true; }
+    if(touch) majSeances.push({ col:'seances', id:doc.ID, data:upd });
+  });
+  await executerMisesAJourParLots_(majSeances);
+  rapport.push(`${majSeances.length} séance(s) mise(s) à jour (ChapitreID→ThemeID, ThemeID→LeconID)`);
+
+  p(`Mise à jour des champs sur ${resultats.length} résultat(s)…`);
+  const majResultats = [];
+  resultats.forEach(doc=>{
+    if(doc.ThemeID !== undefined && doc.LeconID === undefined){
+      majResultats.push({ col:'resultats', id:doc.ID, data:{ LeconID: doc.ThemeID, ThemeID: firebase.firestore.FieldValue.delete() } });
+    }
+  });
+  await executerMisesAJourParLots_(majResultats);
+  rapport.push(`${majResultats.length} résultat(s) mis à jour (ThemeID→LeconID)`);
+
+  p(`Mise à jour des champs sur ${exercices.length} exercice(s) personnalisé(s)…`);
+  const majExercices = [];
+  exercices.forEach(doc=>{
+    if(doc.ChapitreID !== undefined && doc.ThemeID === undefined){
+      majExercices.push({ col:'exercices', id:doc.ID, data:{ ThemeID: doc.ChapitreID, ChapitreID: firebase.firestore.FieldValue.delete() } });
+    }
+  });
+  await executerMisesAJourParLots_(majExercices);
+  rapport.push(`${majExercices.length} exercice(s) mis à jour (ChapitreID→ThemeID)`);
+
+  p(`Mise à jour des champs sur ${carnetEntries.length} entrée(s) de carnet…`);
+  const majCarnet = [];
+  carnetEntries.forEach(doc=>{
+    const upd = {};
+    let touch = false;
+    if(doc.ObjectifThemeID !== undefined && doc.ObjectifLeconID === undefined){ upd.ObjectifLeconID = doc.ObjectifThemeID; upd.ObjectifThemeID = firebase.firestore.FieldValue.delete(); touch = true; }
+    if(doc.ObjectifThemeNom !== undefined && doc.ObjectifLeconNom === undefined){ upd.ObjectifLeconNom = doc.ObjectifThemeNom; upd.ObjectifThemeNom = firebase.firestore.FieldValue.delete(); touch = true; }
+    if(touch) majCarnet.push({ col:'carnetEntries', id:doc.ID, data:upd });
+  });
+  await executerMisesAJourParLots_(majCarnet);
+  rapport.push(`${majCarnet.length} entrée(s) de carnet mise(s) à jour (Objectif...)`);
+
+  p('Rechargement des caches…');
+  await Promise.all([
+    rafraichirThemesCustom(), rafraichirThemeOverrides(), rafraichirLeconOverrides(),
+    rafraichirLeconsPersonnalises(), rafraichirExercicesCustom(), rafraichirTechniques()
+  ].map(fn=>fn().catch(()=>null)));
+
+  return rapport;
+}
+
+function migrerRenommageThemeLeconUI(){
+  if(!confirm("Cette migration renomme des collections et des champs Firestore (voir le détail dans le message d'accompagnement). À lancer UNE SEULE FOIS, après avoir mis à jour les règles de sécurité Firestore. Continuer ?")) return;
+  const btn = document.getElementById('btn-migration-lecon');
+  const msgEl = document.getElementById('migration-msg');
+  if(btn) btn.disabled = true;
+  msgEl.innerHTML = '<div class="msg">Migration en cours… ne fermez pas cet onglet.</div>';
+  migrerRenommageThemeLecon(txt=>{ msgEl.innerHTML = `<div class="msg">${txt}</div>`; })
+    .then(rapport=>{
+      msgEl.innerHTML = `<div class="msg" style="background:#ebfbee; color:#2f9e44;">✅ Migration terminée.<br>${rapport.join('<br>')}</div>`;
+      if(btn) btn.disabled = false;
+    })
+    .catch(e=>{
+      msgEl.innerHTML = `<div class="msg" style="background:#fff5f5; color:#c92a2a;">❌ Erreur pendant la migration : ${e.message}. Vérifiez que les règles Firestore autorisent bien l'accès à "themeOverrides", "leconOverrides", "themesCustom" et "leconsPersonnalises", puis relancez — la migration peut être rejouée sans créer de doublons.</div>`;
+      if(btn) btn.disabled = false;
+    });
+}
 
 async function genererDonneesTest(onProgress){
-  onProgress && onProgress('Préparation des thèmes disponibles…');
-  await Promise.all([rafraichirChapitresCustom(), rafraichirExercicesCustom(), rafraichirThemesPersonnalises(),
-    rafraichirThemeOverrides(), rafraichirChapitreOverrides()]);
-  const themesDispo = [];
-  getChapitresAffiches().forEach(ch=>{
-    getThemesAffiches(ch.id).forEach(t=>{ themesDispo.push({ chapitreId: ch.id, themeId: t.id, themeNom: t.nom }); });
+  onProgress && onProgress('Préparation des leçons disponibles…');
+  await Promise.all([rafraichirThemesCustom(), rafraichirExercicesCustom(), rafraichirLeconsPersonnalises(),
+    rafraichirLeconOverrides(), rafraichirThemeOverrides()]);
+  const leconsDispo = [];
+  getThemesAffiches().forEach(ch=>{
+    getLeconsAffiches(ch.id).forEach(t=>{ leconsDispo.push({ themeId: ch.id, leconId: t.id, leconNom: t.nom }); });
   });
-  THEMES_PERSONNALISES_CACHE.forEach(tp=>{
-    themesDispo.push({ chapitreId: tp.ChapitreID, themeId: 'theme-perso-'+tp.ID, themeNom: tp.Nom });
+  LECONS_PERSONNALISES_CACHE.forEach(tp=>{
+    leconsDispo.push({ themeId: tp.ThemeID, leconId: 'lecon-perso-'+tp.ID, leconNom: tp.Nom });
   });
-  if(!themesDispo.length) throw new Error("Aucun thème disponible — créez au moins un chapitre/thème avant de générer des données de test.");
+  if(!leconsDispo.length) throw new Error("Aucun leçon disponible — créez au moins un thème/leçon avant de générer des données de test.");
 
   onProgress && onProgress('Création de 30 élèves TEST-…');
   const eleves = [];
@@ -5089,10 +5342,10 @@ async function genererDonneesTest(onProgress){
     const carnetActif = n>=6 && n<=13;
     const evaluationFinale = n>=14;
     const date = new Date(Date.now() - (15-n)*7*jourMs).toISOString().slice(0,10);
-    const themeChoisi = themesDispo[(n-1) % themesDispo.length];
+    const leconChoisi = leconsDispo[(n-1) % leconsDispo.length];
     const titre = `TEST- Leçon ${n}${evaluationFinale?' (évaluation finale)':(carnetActif?' (autonomie)':'')}`;
-    const s = await createSeance(date, themeChoisi.chapitreId, themeChoisi.themeId, titre, prochainNumero++, carnetActif, evaluationFinale);
-    seances.push({ id: s.id, date, carnetActif, evaluationFinale, themeSecours: themeChoisi, numero: n });
+    const s = await createSeance(date, leconChoisi.themeId, leconChoisi.leconId, titre, prochainNumero++, carnetActif, evaluationFinale);
+    seances.push({ id: s.id, date, carnetActif, evaluationFinale, leconSecours: leconChoisi, numero: n });
   }
 
   onProgress && onProgress('Attribution des rôles AFL3…');
@@ -5128,10 +5381,10 @@ async function genererDonneesTest(onProgress){
             const a = groupe[i], b = groupe[j];
             const aGagne = Math.random() < (a.skill/(a.skill+b.skill));
             ecritures.push({ col:'resultats', data: { SeanceID: seance.id, EleveID: a.id, PouleLabel: pouleLabel,
-              ThemeID: seance.themeSecours.themeId, Phase:'jaune', Niveau:'', Detail:'Match évaluation finale (test)',
+              LeconID: seance.leconSecours.leconId, Phase:'jaune', Niveau:'', Detail:'Match évaluation finale (test)',
               Score: aGagne?'21-15':'15-21', ObjectifAtteint:'', Victoire: aGagne?'oui':'non', Horodatage: horodatageBase } });
             ecritures.push({ col:'resultats', data: { SeanceID: seance.id, EleveID: b.id, PouleLabel: pouleLabel,
-              ThemeID: seance.themeSecours.themeId, Phase:'jaune', Niveau:'', Detail:'Match évaluation finale (test)',
+              LeconID: seance.leconSecours.leconId, Phase:'jaune', Niveau:'', Detail:'Match évaluation finale (test)',
               Score: aGagne?'15-21':'21-15', ObjectifAtteint:'', Victoire: aGagne?'non':'oui', Horodatage: horodatageBase } });
           }
         }
@@ -5140,17 +5393,17 @@ async function genererDonneesTest(onProgress){
 
       groupe.forEach(eleve=>{
         if(seance.carnetActif && Math.random() < eleve.regularite){
-          const choix = randChoice(themesDispo);
+          const choix = randChoice(leconsDispo);
           ecritures.push({ col:'carnetEntries', data: { SeanceID: seance.id, EleveID: eleve.id, PouleLabel: pouleLabel,
-            ObjectifThemeID: choix.themeId, ObjectifThemeNom: choix.themeNom, Bilan: randChoice(TEST_BILANS),
+            ObjectifLeconID: choix.leconId, ObjectifLeconNom: choix.leconNom, Bilan: randChoice(TEST_BILANS),
             Horodatage: horodatageBase } });
           eleve.objectifActif = choix;
         }
 
-        const themeOrange = (seance.carnetActif && eleve.objectifActif) ? eleve.objectifActif : seance.themeSecours;
+        const leconOrange = (seance.carnetActif && eleve.objectifActif) ? eleve.objectifActif : seance.leconSecours;
         const reussiOrange = Math.random() < eleve.skill;
         ecritures.push({ col:'resultats', data: { SeanceID: seance.id, EleveID: eleve.id, PouleLabel: pouleLabel,
-          ThemeID: themeOrange.themeId, Phase:'orange', Niveau:'', Detail:'Essai décontextualisé (test)',
+          LeconID: leconOrange.leconId, Phase:'orange', Niveau:'', Detail:'Essai décontextualisé (test)',
           Score:'', ObjectifAtteint: reussiOrange?'oui':'non', Victoire:'', Horodatage: horodatageBase } });
 
         if(seance.carnetActif && eleve.roles.includes('coach') && Math.random() < 0.3){
@@ -5163,15 +5416,15 @@ async function genererDonneesTest(onProgress){
       for(let i=0;i<groupe.length;i++){
         for(let j=i+1;j<groupe.length;j++){
           const a = groupe[i], b = groupe[j];
-          const themeA = (seance.carnetActif && a.objectifActif) ? a.objectifActif : seance.themeSecours;
-          const themeB = (seance.carnetActif && b.objectifActif) ? b.objectifActif : seance.themeSecours;
+          const leconA = (seance.carnetActif && a.objectifActif) ? a.objectifActif : seance.leconSecours;
+          const leconB = (seance.carnetActif && b.objectifActif) ? b.objectifActif : seance.leconSecours;
           const aGagne = Math.random() < (a.skill/(a.skill+b.skill));
           const aReussi = Math.random() < a.skill, bReussi = Math.random() < b.skill;
           ecritures.push({ col:'resultats', data: { SeanceID: seance.id, EleveID: a.id, PouleLabel: pouleLabel,
-            ThemeID: themeA.themeId, Phase:'jaune', Niveau:'', Detail:'Match (test)',
+            LeconID: leconA.leconId, Phase:'jaune', Niveau:'', Detail:'Match (test)',
             Score: aGagne?'21-15':'15-21', ObjectifAtteint: aReussi?'oui':'non', Victoire: aGagne?'oui':'non', Horodatage: horodatageBase } });
           ecritures.push({ col:'resultats', data: { SeanceID: seance.id, EleveID: b.id, PouleLabel: pouleLabel,
-            ThemeID: themeB.themeId, Phase:'jaune', Niveau:'', Detail:'Match (test)',
+            LeconID: leconB.leconId, Phase:'jaune', Niveau:'', Detail:'Match (test)',
             Score: aGagne?'15-21':'21-15', ObjectifAtteint: bReussi?'oui':'non', Victoire: aGagne?'non':'oui', Horodatage: horodatageBase } });
         }
       }
