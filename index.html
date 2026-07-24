@@ -119,6 +119,16 @@
     display:inline-flex; align-items:center; gap:6px; background:#fff4e6; color:#e8590c;
     border:1px solid #ffd8a8; padding:4px 12px; border-radius:20px; font-size:.78rem; font-weight:700;
   }
+  /* EXPORT PDF DE LA BANQUE (impression / Ctrl+P) */
+  .export-theme-bloc{ page-break-before: always; }
+  .export-theme-bloc:first-child{ page-break-before: auto; }
+  .export-lecon-bloc, .export-exercice-bloc{ page-break-inside: avoid; margin-bottom:14px; padding-bottom:10px; border-bottom:1px solid var(--line); }
+  @media print{
+    .no-print{ display:none !important; }
+    body{ background:#fff; }
+    .wrap{ max-width:100%; padding:0; }
+    .card{ box-shadow:none; border:1px solid #ccc; }
+  }
 </style>
 </head>
 <body>
@@ -200,6 +210,9 @@
 
   <!-- ===================== ESPACE ADMIN ===================== -->
   <div id="screen-admin" class="hidden"></div>
+
+  <!-- ===================== EXPORT PDF DE LA BANQUE (ADMIN) ===================== -->
+  <div id="screen-export-banque" class="hidden"></div>
 
 </div>
 
@@ -3565,8 +3578,18 @@ function doAdminLogin(){
   const msg = document.getElementById('admin-login-msg');
   adminLogin(pass).then(ok=>{
     if(!ok){ msg.innerHTML = '<div class="msg err">Mot de passe incorrect.</div>'; return; }
-    renderAdminApp();
-    showScreen('screen-admin');
+    // On s'assure d'avoir les données les plus fraîches AVANT le premier
+    // rendu (sinon, sur une page tout juste rechargée, la banque peut
+    // afficher un instant la version d'origine d'une leçon déjà modifiée,
+    // le temps que le préchargement d'arrière-plan se termine).
+    Promise.all([
+      rafraichirThemeOverrides(), rafraichirLeconOverrides(),
+      rafraichirThemesCustom(), rafraichirExercicesCustom(),
+      rafraichirLeconsPersonnalises(), rafraichirTechniques()
+    ]).catch(()=>null).then(()=>{
+      renderAdminApp();
+      showScreen('screen-admin');
+    });
   }).catch(gsFail);
 }
 
@@ -4448,6 +4471,11 @@ function supprimerExerciceLeconUI(id){
 
 function renderAdminBanque(c){
   let html = `
+    <div class="card center">
+      <p style="margin:0 0 8px; font-weight:700;">🖨️ Export complet de la banque</p>
+      <p class="sub" style="margin:0 0 10px;">Toutes les leçons (intégrées + personnalisées) et tous les exercices, triés par thème, en un seul document — pour garder une trace ou imprimer.</p>
+      <button class="btn secondary" onclick="exporterBanquePDFUI()">🖨️ Exporter en PDF / imprimer</button>
+    </div>
     <div class="card">
       <h2 style="margin-top:0;">📁 Thèmes personnalisés</h2>
       <p class="sub">Pour organiser vos exercices en dehors des 4 thèmes du programme d'origine.</p>
@@ -4509,6 +4537,12 @@ function renderAdminBanque(c){
   rafraichirLeconsPersonnalises();
   ADMIN_BANQUE_THEME = null; ADMIN_BANQUE_LECON = null;
   renderAdminBanqueMenu();
+  // Sécurité anti-affichage périmé : si les surcharges ont changé depuis
+  // le chargement de la page (autre appareil, session longue...), on les
+  // recharge et on redessine le menu avec les données à jour.
+  Promise.all([rafraichirThemeOverrides(), rafraichirLeconOverrides()])
+    .then(()=> renderAdminBanqueMenu())
+    .catch(()=>null);
 }
 
 function chargerListeThemesCustom(){
@@ -4788,6 +4822,94 @@ function creerExerciceUI(){
     annulerEditionExerciceUI();
     chargerListeExercicesCustom();
   }).catch(gsFail);
+}
+
+/* ============================================================
+   EXPORT PDF DE LA BANQUE COMPLÈTE (impression navigateur)
+   ------------------------------------------------------------
+   Génère un document imprimable listant tous les thèmes, avec
+   leurs leçons (intégrées + personnalisées, surcharges déjà
+   fusionnées via findLecon) et leurs exercices personnalisés.
+   Pas de dépendance externe : on réutilise le mécanisme déjà en
+   place ailleurs dans l'appli (Ctrl+P / Cmd+P depuis le
+   navigateur) pour rester 100% utilisable hors-ligne.
+   ============================================================ */
+function exporterBanquePDFUI(){
+  // On s'assure d'avoir les dernières surcharges avant d'exporter,
+  // pour ne jamais imprimer une version périmée par erreur.
+  Promise.all([rafraichirThemeOverrides(), rafraichirLeconOverrides()]).catch(()=>null).then(()=>{
+    renderExportBanquePDF();
+    showScreen('screen-export-banque');
+  });
+}
+
+function leconExportHtml(theme, lecon, estPerso){
+  let blocs = '';
+  if(lecon.sa2 && lecon.sa2.but !== '—') blocs += ficheSA(lecon.sa2, '🟡 Match à thème');
+  if(lecon.sa1 && lecon.sa1.but !== '—') blocs += ficheSA(lecon.sa1, '🟠 Situation décontextualisée');
+  if(theme.reference && theme.reference.but){
+    blocs += `<table class="fiche-table">
+      <tr><th class="bar" colspan="2">🔵 Situation de référence</th></tr>
+      <tr><td class="label">But</td><td>${theme.reference.but}</td></tr>
+      <tr><td class="label">Règle spéciale</td><td>${(theme.reference.regleSpeciale&&theme.reference.regleSpeciale[lecon.id])||''}</td></tr>
+    </table>`;
+  }
+  return `<div class="export-lecon-bloc"><h3 style="margin-bottom:8px;">${estPerso?'🧩 ':''}${lecon.nom}</h3>${blocs}</div>`;
+}
+
+function renderExportBanquePDF(){
+  const el = document.getElementById('screen-export-banque');
+  if(!el) return;
+  let html = `
+    <div class="no-print" style="margin-bottom:16px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+      <p class="link" style="margin:0;" onclick="renderAdminApp(); showScreen('screen-admin');">&larr; retour à l'espace enseignant</p>
+      <button class="btn" onclick="window.print()">🖨️ Imprimer / Exporter en PDF</button>
+    </div>
+    <div class="no-print msg" style="background:#e7f5ff; color:#1971c2; margin-bottom:16px;">Cliquez sur "Imprimer / Exporter en PDF" puis, dans la fenêtre d'impression de votre navigateur, choisissez la destination "Enregistrer au format PDF".</div>
+    <h1>📚 Banque complète — thèmes, leçons et exercices</h1>
+    <p class="sub">Généré le ${new Date().toLocaleDateString('fr-FR')}.</p>`;
+
+  getThemesAffiches().forEach(ch=>{
+    const leconsPersoDuTheme = LECONS_PERSONNALISES_CACHE.filter(tp=>String(tp.ThemeID)===String(ch.id));
+    const exercicesDuTheme = CUSTOM_EXERCICES_CACHE.filter(ex=>Number(ex.ThemeID)===ch.id);
+    html += `<div class="export-theme-bloc">
+      <h2 style="border-left:6px solid ${ch.couleur}; padding-left:10px;">Thème ${ch.id} — ${ch.nom}</h2>`;
+    getLeconsAffiches(ch.id).forEach(t=>{
+      const found = findLecon(t.id);
+      if(found) html += leconExportHtml(found.theme, found.lecon);
+    });
+    leconsPersoDuTheme.forEach(tp=>{
+      const found = findLecon('lecon-perso-'+tp.ID);
+      if(found) html += leconExportHtml(found.theme, found.lecon, true);
+    });
+    exercicesDuTheme.forEach(ex=>{
+      const found = findLecon('custom-'+ex.ID);
+      if(found) html += leconExportHtml(found.theme, Object.assign({}, found.lecon, { nom: '⭐ '+ex.Nom+' (exercice personnalisé)' }));
+    });
+    if(!getLeconsAffiches(ch.id).length && !leconsPersoDuTheme.length && !exercicesDuTheme.length){
+      html += '<p class="sub">Aucune leçon ni exercice dans ce thème.</p>';
+    }
+    html += `</div>`;
+  });
+
+  CUSTOM_THEMES_CACHE.forEach(chCustom=>{
+    const leconsPersoDuTheme = LECONS_PERSONNALISES_CACHE.filter(tp=>tp.ThemeID===chCustom.ID);
+    const exercicesDuTheme = CUSTOM_EXERCICES_CACHE.filter(ex=>ex.ThemeID===chCustom.ID);
+    if(!leconsPersoDuTheme.length && !exercicesDuTheme.length) return;
+    html += `<div class="export-theme-bloc">
+      <h2 style="border-left:6px solid ${chCustom.Couleur||COULEUR_THEME_PAR_DEFAUT}; padding-left:10px;">📁 ${chCustom.Nom} <span class="sub">(thème personnalisé)</span></h2>`;
+    leconsPersoDuTheme.forEach(tp=>{
+      const found = findLecon('lecon-perso-'+tp.ID);
+      if(found) html += leconExportHtml(found.theme, found.lecon, true);
+    });
+    exercicesDuTheme.forEach(ex=>{
+      const found = findLecon('custom-'+ex.ID);
+      if(found) html += leconExportHtml(found.theme, Object.assign({}, found.lecon, { nom: '⭐ '+ex.Nom+' (exercice personnalisé)' }));
+    });
+    html += `</div>`;
+  });
+
+  el.innerHTML = html;
 }
 
 function renderAdminSuivi(c){
