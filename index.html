@@ -668,6 +668,9 @@ function getLeconsAffiches(themeId){
 // image, compteur modifiés par l'enseignant) par-dessus la version
 // d'origine, SANS jamais modifier la donnée statique THEMES elle-même
 // (on travaille sur une copie).
+function parseJsonSafe_(s){
+  try{ return JSON.parse(s); }catch(e){ return null; }
+}
 function appliquerSurchargeLecon(theme, lecon){
   const ov = LECON_OVERRIDES_CACHE.find(o=>o.ID===lecon.id);
   const ovC = THEME_OVERRIDES_CACHE.find(o=>o.ID===String(theme.id));
@@ -686,6 +689,10 @@ function appliquerSurchargeLecon(theme, lecon){
   if(ov.VariablesMoins1!==undefined) t2.sa1.variables.moins = ov.VariablesMoins1;
   if(ov.VariablesPlus1!==undefined) t2.sa1.variables.plus = ov.VariablesPlus1;
   if(ov.ImageData1) t2.sa1.imageData = ov.ImageData1;
+  if(ov.Diagram1){
+    t2.sa1.diagram = ov.Diagram1;
+    if(ov.Diagram1==='custom' && ov.Diagram1Data) t2.sa1.diagramData = parseJsonSafe_(ov.Diagram1Data);
+  }
 
   if(ov.But2!==undefined) t2.sa2.but = ov.But2;
   if(ov.Amenagement2!==undefined) t2.sa2.amenagement = ov.Amenagement2;
@@ -694,6 +701,10 @@ function appliquerSurchargeLecon(theme, lecon){
   if(ov.VariablesMoins2!==undefined) t2.sa2.variables.moins = ov.VariablesMoins2;
   if(ov.VariablesPlus2!==undefined) t2.sa2.variables.plus = ov.VariablesPlus2;
   if(ov.ImageData2) t2.sa2.imageData = ov.ImageData2;
+  if(ov.Diagram2){
+    t2.sa2.diagram = ov.Diagram2;
+    if(ov.Diagram2==='custom' && ov.Diagram2Data) t2.sa2.diagramData = parseJsonSafe_(ov.Diagram2Data);
+  }
   if(ov.ObjectifCroise2!==undefined) t2.sa2.objectifCroise = ov.ObjectifCroise2;
 
   // Compteur ("Match à thème") : mode et paramètres, si modifiés
@@ -718,6 +729,14 @@ function appliquerSurchargeLecon(theme, lecon){
   if(ov.RegleSpeciale!==undefined) c2.reference.regleSpeciale[lecon.id] = ov.RegleSpeciale;
   if(ov.ButReference!==undefined) c2.reference.but = ov.ButReference;
   if(ov.ImageDataRef) c2.reference.imageDataRef = ov.ImageDataRef;
+  if(ov.DiagramRef){
+    if(!c2.reference.diagram) c2.reference.diagram = {};
+    c2.reference.diagram[lecon.id] = ov.DiagramRef;
+    if(ov.DiagramRef==='custom' && ov.DiagramRefData){
+      if(!c2.reference.diagramData) c2.reference.diagramData = {};
+      c2.reference.diagramData[lecon.id] = parseJsonSafe_(ov.DiagramRefData);
+    }
+  }
 
   return { theme: c2, lecon: t2 };
 }
@@ -755,10 +774,14 @@ function customExerciceToLeconShape(ex){
   const themeBase = findThemePourExercice(ex);
   const vide = { niveaux:[], but:'—', amenagement:'—', consignes:'—', criteres:'—',
     variables:{moins:'—', plus:'—'}, diagram:'full' };
+  let diagramDataParsed = null;
+  if(ex.Diagram === 'custom' && ex.DiagramData){
+    try{ diagramDataParsed = JSON.parse(ex.DiagramData); }catch(e){ diagramDataParsed = null; }
+  }
   const contenu = {
     but: ex.But||'', amenagement: ex.Amenagement||'', consignes: ex.Consignes||'',
     criteres: ex.CriteresTexte||'', variables:{ moins: ex.VariablesMoins||'—', plus: ex.VariablesPlus||'—' },
-    diagram: 'full', imageData: ex.ImageData || null
+    diagram: ex.Diagram||'full', diagramData: diagramDataParsed, imageData: ex.ImageData || null
   };
   let scoreExtra = {};
   try{ scoreExtra = ex.ScoreModeConfig ? JSON.parse(ex.ScoreModeConfig) : {}; }catch(e){ scoreExtra = {}; }
@@ -787,7 +810,8 @@ function leconPersonaliseToLeconShape(doc){
   const sa1 = doc.But1 ? {
     niveaux:[], but: doc.But1||'', amenagement: doc.Amenagement1||'', consignes: doc.Consignes1||'',
     criteres: doc.Criteres1||'', variables:{ moins: doc.VariablesMoins1||'—', plus: doc.VariablesPlus1||'—' },
-    diagram:'full', imageData: doc.ImageData1||null
+    diagram: doc.Diagram1||'full', diagramData: doc.Diagram1==='custom' && doc.Diagram1Data ? parseJsonSafe_(doc.Diagram1Data) : null,
+    imageData: doc.ImageData1||null
   } : vide;
 
   let scoreExtra = {};
@@ -803,7 +827,8 @@ function leconPersonaliseToLeconShape(doc){
   const sa2 = doc.But2 ? Object.assign({
     niveaux:[], but: doc.But2||'', amenagement: doc.Amenagement2||'', consignes: doc.Consignes2||'',
     criteres: doc.Criteres2||'', variables:{ moins: doc.VariablesMoins2||'—', plus: doc.VariablesPlus2||'—' },
-    diagram:'full', imageData: doc.ImageData2||null, scoreMode: doc.ScoreMode2||'direct',
+    diagram: doc.Diagram2||'full', diagramData: doc.Diagram2==='custom' && doc.Diagram2Data ? parseJsonSafe_(doc.Diagram2Data) : null,
+    imageData: doc.ImageData2||null, scoreMode: doc.ScoreMode2||'direct',
     objectifCroise: doc.ObjectifCroise2||''
   }, scoreExtra) : vide;
 
@@ -811,7 +836,9 @@ function leconPersonaliseToLeconShape(doc){
     reference: Object.assign({}, themeBase.reference, {
       but: doc.ButReference || themeBase.reference.but || '',
       regleSpeciale: Object.assign({}, themeBase.reference.regleSpeciale||{}, { [leconId]: doc.RegleSpeciale||'' }),
-      imageDataRef: doc.ImageDataRef || themeBase.reference.imageDataRef
+      imageDataRef: doc.ImageDataRef || themeBase.reference.imageDataRef,
+      diagram: Object.assign({}, themeBase.reference.diagram||{}, { [leconId]: doc.DiagramRef || 'full' }),
+      diagramData: Object.assign({}, themeBase.reference.diagramData||{}, { [leconId]: doc.DiagramRef==='custom' && doc.DiagramRefData ? parseJsonSafe_(doc.DiagramRefData) : null })
     })
   });
 
@@ -886,6 +913,321 @@ const DIAGRAM_PRESETS = {
 function courtDiagram(kind){
   const preset = DIAGRAM_PRESETS[kind] || DIAGRAM_PRESETS.full;
   return `<div class="diagram-wrap">${svgCourt(preset())}</div>`;
+}
+
+// Libellés français des schémas vectoriels tout prêts, proposés dans les
+// formulaires d'édition pour éviter d'avoir à screenshoter un schéma
+// existant (qualité dégradée) quand on veut réutiliser le même type.
+const DIAGRAM_PRESET_LABELS = {
+  full: 'Terrain simple (2 joueurs)',
+  serviceDiag: 'Service — zone visée',
+  serviceCourt: 'Service — zone courte',
+  zoneAvant: 'Zone avant',
+  zoneArriere: 'Zone arrière',
+  zoneAvantArriere: 'Zones avant + arrière',
+  quatreCoins: 'Quatre coins',
+  sixZones: 'Six zones',
+  backhand: 'Zone revers',
+  lateralZones: 'Zones latérales (couloirs)',
+  accelLines: "Lignes d'accélération",
+  displacement: 'Déplacements (flèches centrales)',
+  centerLob: 'Dégagement centre'
+};
+function diagramPresetOptionsHtml(selected){
+  const isCustom = selected === 'custom';
+  let html = Object.keys(DIAGRAM_PRESET_LABELS).map(k=>
+    `<option value="${k}" ${selected===k?'selected':''}>${DIAGRAM_PRESET_LABELS[k]}</option>`
+  ).join('');
+  html += `<option value="custom" ${isCustom?'selected':''}>🎨 Schéma personnalisé (créé avec l'éditeur)</option>`;
+  return html;
+}
+// Aperçu SVG en direct sous le menu déroulant : un libellé texte ne suffit
+// pas à se représenter un schéma, donc on redessine l'aperçu à chaque
+// changement de sélection (voir updateDiagramPreview_ plus bas).
+function diagramPreviewHtml(fieldSuffix, kind, customCfg){
+  const content = kind==='custom' && customCfg ? svgCourt(customCfg) : courtDiagram(kind).replace(/<div class="diagram-wrap">|<\/div>$/g,'');
+  return `<div id="ov-diagram-preview${fieldSuffix}" class="diagram-wrap" style="background:#f8f7f4; border:1px solid var(--line); border-radius:8px; padding:6px;">${content}</div>`;
+}
+function updateDiagramPreview_(fieldSuffix){
+  const sel = document.getElementById('ov-diagram'+fieldSuffix);
+  const zone = document.getElementById('ov-diagram-preview'+fieldSuffix);
+  if(!sel || !zone) return;
+  if(sel.value === 'custom'){
+    const cfg = fieldSuffix==='ex' ? EX_DIAGRAM_CUSTOM_DATA : OVERRIDE_DIAGRAM_DATA[fieldSuffix];
+    zone.innerHTML = cfg ? svgCourt(cfg) : '<p class="sub" style="margin:8px;">Aucun schéma personnalisé créé pour l\'instant — cliquez sur "🎨 Créer / modifier un schéma".</p>';
+  } else {
+    zone.innerHTML = courtDiagram(sel.value).replace(/<div class="diagram-wrap">|<\/div>$/g,'');
+  }
+}
+// Bloc réutilisable "choisir un schéma tout prêt à la place d'une image
+// uploadée" — évite d'avoir à screenshoter un schéma existant (perte de
+// qualité). Cochée, la case efface l'image actuellement enregistrée pour
+// cette situation au moment de l'enregistrement. Propose aussi un aperçu
+// en direct et l'accès à l'éditeur glisser-déposer.
+function diagramPresetPickerHtml(fieldSuffix, currentDiagram){
+  return `<div style="margin-top:10px; padding-top:10px; border-top:1px dashed var(--line);">
+    <label>Ou choisir un schéma tout prêt (vectoriel, toujours net — évite de screenshoter un schéma existant)</label>
+    <div class="row">
+      <div style="flex:2;">
+        <select class="ov-field" id="ov-diagram${fieldSuffix}" onchange="updateDiagramPreview_('${fieldSuffix}')" disabled>${diagramPresetOptionsHtml(currentDiagram)}</select>
+        <div style="margin-top:8px; max-width:160px;">${diagramPreviewHtml(fieldSuffix, currentDiagram, OVERRIDE_DIAGRAM_DATA[fieldSuffix])}</div>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        <label style="font-weight:400; margin:0;"><input type="checkbox" class="ov-field" id="ov-usediagram${fieldSuffix}" style="width:auto; display:inline-block;" disabled> Utiliser ce schéma (efface l'image ci-dessus)</label>
+        <button type="button" class="btn secondary small" onclick="ouvrirEditeurSchemaUI('${fieldSuffix}')">🎨 Créer / modifier un schéma</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ============================================================
+   ÉDITEUR DE SCHÉMA GLISSER-DÉPOSER
+   ------------------------------------------------------------
+   Permet de construire un schéma à partir d'un terrain vierge (ou
+   en partant d'un schéma tout prêt qu'on ajuste) : joueurs, zones
+   colorées, flèches — mêmes primitives que DIAGRAM_PRESETS, donc
+   100% compatible avec le moteur d'affichage existant (svgCourt).
+   Pas de bibliothèque externe : juste quelques formes SVG et des
+   écouteurs pointerdown/pointermove/pointerup — reste très léger.
+   ============================================================ */
+let DIAGRAM_EDITOR_STATE = null;   // { zones:[], players:[], arrows:[] }
+let DIAGRAM_EDITOR_SUFFIX = null;  // '1' | '2' | 'ref' | 'ex' — où renvoyer le résultat
+let DIAGRAM_EDITOR_SELECTED = null; // { type:'zone'|'player'|'arrow', index }
+let DIAGRAM_EDITOR_DRAG = null;    // état de glissement en cours
+
+function escXml_(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function escAttr_(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+
+function ouvrirEditeurSchemaUI(suffix){
+  DIAGRAM_EDITOR_SUFFIX = suffix;
+  const depart = suffix==='ex' ? EX_DIAGRAM_CUSTOM_DATA : OVERRIDE_DIAGRAM_DATA[suffix];
+  const base = depart ? JSON.parse(JSON.stringify(depart)) : { players:[{x:60,y:230,label:'A'},{x:150,y:90,label:'B'}] };
+  DIAGRAM_EDITOR_STATE = {
+    zones: base.zones || [], players: base.players || [], arrows: base.arrows || []
+  };
+  DIAGRAM_EDITOR_SELECTED = null;
+  dessinerEditeurSchema_();
+}
+
+function fermerEditeurSchemaUI(){
+  const el = document.getElementById('diagram-editor-overlay');
+  if(el) el.remove();
+  document.removeEventListener('pointermove', deplacerDragSchema_);
+  DIAGRAM_EDITOR_STATE = null;
+  DIAGRAM_EDITOR_SUFFIX = null;
+  DIAGRAM_EDITOR_SELECTED = null;
+  DIAGRAM_EDITOR_DRAG = null;
+}
+
+function validerEditeurSchemaUI(){
+  if(!DIAGRAM_EDITOR_STATE || !DIAGRAM_EDITOR_SUFFIX) return;
+  const suffix = DIAGRAM_EDITOR_SUFFIX;
+  const data = DIAGRAM_EDITOR_STATE;
+  if(suffix==='ex') EX_DIAGRAM_CUSTOM_DATA = data;
+  else OVERRIDE_DIAGRAM_DATA[suffix] = data;
+  fermerEditeurSchemaUI();
+  const sel = document.getElementById('ov-diagram'+suffix);
+  if(sel) sel.value = 'custom';
+  const cb = document.getElementById('ov-usediagram'+suffix);
+  if(cb) cb.checked = true;
+  updateDiagramPreview_(suffix);
+}
+
+function ajouterItemSchema_(type){
+  if(!DIAGRAM_EDITOR_STATE) return;
+  if(type==='player'){
+    DIAGRAM_EDITOR_STATE.players.push({x:110, y:160, label:'A'});
+    DIAGRAM_EDITOR_SELECTED = { type:'player', index: DIAGRAM_EDITOR_STATE.players.length-1 };
+  } else if(type==='zone'){
+    DIAGRAM_EDITOR_STATE.zones.push({x:70, y:130, w:80, h:60, color:'#e8590c', label:''});
+    DIAGRAM_EDITOR_SELECTED = { type:'zone', index: DIAGRAM_EDITOR_STATE.zones.length-1 };
+  } else if(type==='arrow'){
+    DIAGRAM_EDITOR_STATE.arrows.push({x1:80, y1:220, x2:140, y2:110});
+    DIAGRAM_EDITOR_SELECTED = { type:'arrow', index: DIAGRAM_EDITOR_STATE.arrows.length-1 };
+  }
+  dessinerEditeurSchema_();
+}
+
+function supprimerItemSchemaSelection_(){
+  const sel = DIAGRAM_EDITOR_SELECTED;
+  if(!sel) return;
+  const arr = sel.type==='player' ? DIAGRAM_EDITOR_STATE.players : sel.type==='zone' ? DIAGRAM_EDITOR_STATE.zones : DIAGRAM_EDITOR_STATE.arrows;
+  arr.splice(sel.index, 1);
+  DIAGRAM_EDITOR_SELECTED = null;
+  dessinerEditeurSchema_();
+}
+
+function majChampSchema_(champ, valeur){
+  const sel = DIAGRAM_EDITOR_SELECTED;
+  if(!sel) return;
+  const arr = sel.type==='player' ? DIAGRAM_EDITOR_STATE.players : sel.type==='zone' ? DIAGRAM_EDITOR_STATE.zones : DIAGRAM_EDITOR_STATE.arrows;
+  const item = arr[sel.index];
+  if(!item) return;
+  item[champ] = valeur;
+  const wrap = document.getElementById('diagram-editor-svg-wrap');
+  if(wrap) wrap.innerHTML = svgEditeurCourt_();
+}
+
+// Convertit une position souris/doigt (coordonnées écran) en coordonnées
+// internes du SVG (viewBox 0 0 220 320), quelle que soit la taille
+// affichée à l'écran — utilise la matrice de transformation native du SVG,
+// la méthode la plus fiable, gère aussi bien souris que tactile.
+function clientToSvgXY_(svgEl, clientX, clientY){
+  try{
+    const pt = svgEl.createSVGPoint();
+    pt.x = clientX; pt.y = clientY;
+    const ctm = svgEl.getScreenCTM();
+    const loc = pt.matrixTransform(ctm.inverse());
+    return { x: loc.x, y: loc.y };
+  }catch(e){
+    const rect = svgEl.getBoundingClientRect();
+    return { x: (clientX-rect.left)*220/rect.width, y: (clientY-rect.top)*320/rect.height };
+  }
+}
+
+function demarrerDragSchema_(evt, kind, index){
+  evt.preventDefault();
+  evt.stopPropagation();
+  if(kind==='arrow-select'){
+    DIAGRAM_EDITOR_SELECTED = { type:'arrow', index };
+    dessinerEditeurSchema_();
+    return;
+  }
+  const svg = document.getElementById('diagram-editor-svg');
+  if(!svg) return;
+  const start = clientToSvgXY_(svg, evt.clientX, evt.clientY);
+  let origX, origY;
+  if(kind==='zone'){ const z = DIAGRAM_EDITOR_STATE.zones[index]; origX=z.x; origY=z.y; }
+  else if(kind==='player'){ const p = DIAGRAM_EDITOR_STATE.players[index]; origX=p.x; origY=p.y; }
+  else if(kind==='arrow-start'){ const a = DIAGRAM_EDITOR_STATE.arrows[index]; origX=a.x1; origY=a.y1; }
+  else if(kind==='arrow-end'){ const a = DIAGRAM_EDITOR_STATE.arrows[index]; origX=a.x2; origY=a.y2; }
+  else return;
+  DIAGRAM_EDITOR_DRAG = { mode:kind, index, startX:start.x, startY:start.y, origX, origY, moved:false };
+  document.addEventListener('pointermove', deplacerDragSchema_);
+  document.addEventListener('pointerup', finirDragSchema_, { once:true });
+}
+
+function deplacerDragSchema_(evt){
+  const d = DIAGRAM_EDITOR_DRAG;
+  if(!d) return;
+  const svg = document.getElementById('diagram-editor-svg');
+  if(!svg) return;
+  const cur = clientToSvgXY_(svg, evt.clientX, evt.clientY);
+  const dx = cur.x - d.startX, dy = cur.y - d.startY;
+  if(Math.abs(dx) > 1 || Math.abs(dy) > 1) d.moved = true;
+  const nx = Math.round(Math.max(0, Math.min(220, d.origX + dx)));
+  const ny = Math.round(Math.max(0, Math.min(320, d.origY + dy)));
+  if(d.mode==='zone'){ DIAGRAM_EDITOR_STATE.zones[d.index].x = nx; DIAGRAM_EDITOR_STATE.zones[d.index].y = ny; }
+  else if(d.mode==='player'){ DIAGRAM_EDITOR_STATE.players[d.index].x = nx; DIAGRAM_EDITOR_STATE.players[d.index].y = ny; }
+  else if(d.mode==='arrow-start'){ DIAGRAM_EDITOR_STATE.arrows[d.index].x1 = nx; DIAGRAM_EDITOR_STATE.arrows[d.index].y1 = ny; }
+  else if(d.mode==='arrow-end'){ DIAGRAM_EDITOR_STATE.arrows[d.index].x2 = nx; DIAGRAM_EDITOR_STATE.arrows[d.index].y2 = ny; }
+  const wrap = document.getElementById('diagram-editor-svg-wrap');
+  if(wrap) wrap.innerHTML = svgEditeurCourt_();
+}
+
+function finirDragSchema_(){
+  document.removeEventListener('pointermove', deplacerDragSchema_);
+  const d = DIAGRAM_EDITOR_DRAG;
+  if(d && !d.moved){
+    // Pas de déplacement réel : c'était un clic de sélection, pas un glissement.
+    const type = d.mode==='zone' ? 'zone' : d.mode==='player' ? 'player' : 'arrow';
+    DIAGRAM_EDITOR_SELECTED = { type, index: d.index };
+  }
+  DIAGRAM_EDITOR_DRAG = null;
+  dessinerEditeurSchema_();
+}
+
+function svgEditeurCourt_(){
+  const cfg = DIAGRAM_EDITOR_STATE || { zones:[], players:[], arrows:[] };
+  const sel = DIAGRAM_EDITOR_SELECTED;
+  let inner = `<rect x="10" y="10" width="200" height="300" fill="#eef6ff" stroke="#1971c2" stroke-width="2" rx="4"/>
+    <line x1="10" y1="160" x2="210" y2="160" stroke="#1971c2" stroke-width="3"/>
+    <line x1="110" y1="10" x2="110" y2="120" stroke="#90caf9" stroke-width="1"/>
+    <line x1="110" y1="200" x2="110" y2="310" stroke="#90caf9" stroke-width="1"/>
+    <line x1="10" y1="120" x2="210" y2="120" stroke="#90caf9" stroke-width="1" stroke-dasharray="4 3"/>
+    <line x1="10" y1="200" x2="210" y2="200" stroke="#90caf9" stroke-width="1" stroke-dasharray="4 3"/>`;
+
+  (cfg.zones||[]).forEach((z,i)=>{
+    const isSel = sel && sel.type==='zone' && sel.index===i;
+    inner += `<rect x="${z.x}" y="${z.y}" width="${z.w}" height="${z.h}" fill="${z.color||'#e8590c'}" fill-opacity="0.6" stroke="${isSel?'#1b1b1f':(z.color||'#e8590c')}" stroke-width="${isSel?3:1.5}" ${isSel?'stroke-dasharray="4 2"':''} rx="3" style="cursor:grab;" onpointerdown="demarrerDragSchema_(event,'zone',${i})"/>`;
+    if(z.label) inner += `<text x="${z.x+z.w/2}" y="${z.y+z.h/2+3}" font-size="8.5" text-anchor="middle" fill="#fff" font-weight="700" style="pointer-events:none;">${escXml_(z.label)}</text>`;
+  });
+  (cfg.arrows||[]).forEach((a,i)=>{
+    const isSel = sel && sel.type==='arrow' && sel.index===i;
+    inner += `<line x1="${a.x1}" y1="${a.y1}" x2="${a.x2}" y2="${a.y2}" stroke="${isSel?'#1b1b1f':'#e8590c'}" stroke-width="2.5" marker-end="url(#arrowh)" style="cursor:pointer;" onpointerdown="demarrerDragSchema_(event,'arrow-select',${i})"/>`;
+    inner += `<circle cx="${a.x1}" cy="${a.y1}" r="7" fill="#fff" stroke="#e8590c" stroke-width="2" style="cursor:grab;" onpointerdown="demarrerDragSchema_(event,'arrow-start',${i})"/>`;
+    inner += `<circle cx="${a.x2}" cy="${a.y2}" r="7" fill="#e8590c" stroke="#fff" stroke-width="1.5" style="cursor:grab;" onpointerdown="demarrerDragSchema_(event,'arrow-end',${i})"/>`;
+  });
+  (cfg.players||[]).forEach((p,i)=>{
+    const isSel = sel && sel.type==='player' && sel.index===i;
+    inner += `<circle cx="${p.x}" cy="${p.y}" r="10" fill="#20374a" stroke="${isSel?'#f08c00':'none'}" stroke-width="3" style="cursor:grab;" onpointerdown="demarrerDragSchema_(event,'player',${i})"/><text x="${p.x}" y="${p.y+3.5}" font-size="8.5" text-anchor="middle" fill="#fff" font-weight="700" style="pointer-events:none;">${escXml_(p.label)}</text>`;
+  });
+
+  return `<svg id="diagram-editor-svg" viewBox="0 0 220 320" style="width:100%; max-width:280px; display:block; margin:0 auto; touch-action:none; background:#fff; border-radius:8px;">
+    <defs><marker id="arrowh" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#e8590c"/></marker></defs>
+    ${inner}
+  </svg>`;
+}
+
+function dessinerPanneauSelection_(){
+  const sel = DIAGRAM_EDITOR_SELECTED;
+  if(!sel) return '<p class="sub">Cliquez un joueur, une zone ou une flèche pour la modifier, ou ajoutez un élément avec les boutons ci-dessus.</p>';
+  if(sel.type==='player'){
+    const p = DIAGRAM_EDITOR_STATE.players[sel.index];
+    if(!p) return '';
+    return `<div class="card" style="margin:0;">
+      <label>Étiquette du joueur</label>
+      <input value="${escAttr_(p.label)}" oninput="majChampSchema_('label', this.value)">
+      <button type="button" class="btn secondary small" style="margin-top:8px;" onclick="supprimerItemSchemaSelection_()">🗑️ Supprimer ce joueur</button>
+    </div>`;
+  }
+  if(sel.type==='zone'){
+    const z = DIAGRAM_EDITOR_STATE.zones[sel.index];
+    if(!z) return '';
+    return `<div class="card" style="margin:0;">
+      <label>Étiquette de la zone (optionnel)</label>
+      <input value="${escAttr_(z.label||'')}" oninput="majChampSchema_('label', this.value)">
+      <div class="row">
+        <div><label>Largeur</label><input type="number" value="${z.w}" oninput="majChampSchema_('w', Number(this.value)||10)"></div>
+        <div><label>Hauteur</label><input type="number" value="${z.h}" oninput="majChampSchema_('h', Number(this.value)||10)"></div>
+      </div>
+      <label>Couleur</label>
+      <input type="color" value="${z.color||'#e8590c'}" style="width:100%; height:40px; padding:2px;" oninput="majChampSchema_('color', this.value)">
+      <button type="button" class="btn secondary small" style="margin-top:8px;" onclick="supprimerItemSchemaSelection_()">🗑️ Supprimer cette zone</button>
+    </div>`;
+  }
+  if(sel.type==='arrow'){
+    return `<div class="card" style="margin:0;">
+      <p class="sub" style="margin:0 0 8px;">Flèche sélectionnée — glissez les deux poignées rondes sur le terrain pour la repositionner.</p>
+      <button type="button" class="btn secondary small" onclick="supprimerItemSchemaSelection_()">🗑️ Supprimer cette flèche</button>
+    </div>`;
+  }
+  return '';
+}
+
+function dessinerEditeurSchema_(){
+  const existing = document.getElementById('diagram-editor-overlay');
+  if(existing) existing.remove();
+  const overlay = document.createElement('div');
+  overlay.id = 'diagram-editor-overlay';
+  overlay.className = 'no-print';
+  overlay.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:1000; display:flex; align-items:flex-start; justify-content:center; padding:16px; overflow:auto;';
+  overlay.innerHTML = `<div class="card" style="max-width:560px; width:100%; margin-top:20px;">
+    <p style="font-weight:700; margin-top:0;">🎨 Éditeur de schéma</p>
+    <p class="sub" style="margin-top:-8px;">Glissez les éléments pour les déplacer, cliquez pour les sélectionner et les modifier.</p>
+    <div class="row" style="margin-bottom:10px;">
+      <button type="button" class="btn secondary small" onclick="ajouterItemSchema_('player')">+ Joueur</button>
+      <button type="button" class="btn secondary small" onclick="ajouterItemSchema_('zone')">+ Zone</button>
+      <button type="button" class="btn secondary small" onclick="ajouterItemSchema_('arrow')">+ Flèche</button>
+    </div>
+    <div id="diagram-editor-svg-wrap">${svgEditeurCourt_()}</div>
+    <div id="diagram-editor-panel" style="margin-top:10px;">${dessinerPanneauSelection_()}</div>
+    <div class="row" style="margin-top:14px;">
+      <button type="button" class="btn secondary" onclick="fermerEditeurSchemaUI()">Annuler</button>
+      <button type="button" class="btn" onclick="validerEditeurSchemaUI()">✓ Utiliser ce schéma</button>
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
 }
 
 /* ============================================================
@@ -2598,10 +2940,17 @@ function enregistrerTempsMort(){
   }).catch(gsFail);
 }
 
+// Détermine quoi afficher pour le schéma d'une situation : image
+// uploadée en priorité, sinon schéma personnalisé créé avec l'éditeur
+// (diagram==='custom'), sinon un des schémas vectoriels tout prêts.
+function schemaHtmlFor(sa){
+  if(sa.imageData) return `<div class="diagram-wrap"><img src="${sa.imageData}" style="max-width:100%; border-radius:8px; display:block; margin:0 auto;" alt="Schéma de l'exercice"></div>`;
+  if(sa.diagram === 'custom' && sa.diagramData) return `<div class="diagram-wrap">${svgCourt(sa.diagramData)}</div>`;
+  return courtDiagram(sa.diagram);
+}
+
 function ficheSA(sa, titre){
-  const diagramHtml = sa.imageData
-    ? `<div class="diagram-wrap"><img src="${sa.imageData}" style="max-width:100%; border-radius:8px; display:block; margin:0 auto;" alt="Schéma de l'exercice"></div>`
-    : courtDiagram(sa.diagram);
+  const diagramHtml = schemaHtmlFor(sa);
   return `<table class="fiche-table">
     <tr><th class="bar" colspan="2">${titre}</th></tr>
     <tr><td class="label">But</td><td>${sa.but}</td></tr>
@@ -3868,6 +4217,10 @@ function themeOptionsHtml(selectedValue){
 let ADMIN_BANQUE_THEME = null; // id de thème intégré (nombre) ou personnalisé (chaîne Firestore), ou null
 let ADMIN_BANQUE_LECON = null;    // leconId (ex : "1-1" ou "custom-XXXX"), ou null
 let OVERRIDE_IMAGE_DATA = { '1': null, '2': null };
+// Config JSON {zones,players,arrows} d'un schéma créé avec l'éditeur
+// glisser-déposer (voir ouvrirEditeurSchemaUI), par situation ('1','2','ref').
+let OVERRIDE_DIAGRAM_DATA = { '1': null, '2': null, 'ref': null };
+let EX_DIAGRAM_CUSTOM_DATA = null;
 
 function renderAdminBanqueMenu(){
   const zone = document.getElementById('admin-banque-menu');
@@ -4072,11 +4425,19 @@ function adminLeconDetailHtml(leconId){
 
   // Leçon intégré : édition directe, texte + critère + image + compteur (contenu uniquement)
   OVERRIDE_IMAGE_DATA = { '1': null, '2': null, 'ref': null }; // réinitialisé : ne contient que les NOUVELLES images choisies
+  // Pré-rempli avec les schémas personnalisés déjà enregistrés, pour pouvoir
+  // les modifier via l'éditeur sans repartir de zéro.
+  OVERRIDE_DIAGRAM_DATA = {
+    '1': lecon.sa1.diagram==='custom' ? lecon.sa1.diagramData : null,
+    '2': lecon.sa2.diagram==='custom' ? lecon.sa2.diagramData : null,
+    'ref': (theme.reference.diagram && theme.reference.diagram[leconId]==='custom' && theme.reference.diagramData) ? theme.reference.diagramData[leconId] : null
+  };
   const hasOverride = LECON_OVERRIDES_CACHE.some(o=>o.ID===leconId);
   const diagKindRef = theme.reference.diagram ? theme.reference.diagram[leconId] : 'full';
+  const diagDataRef = (diagKindRef==='custom' && theme.reference.diagramData) ? theme.reference.diagramData[leconId] : null;
   const schemaActuelRef = theme.reference.imageDataRef
     ? `<img src="${theme.reference.imageDataRef}" style="max-width:100%; border-radius:8px;">`
-    : courtDiagram(diagKindRef);
+    : schemaHtmlFor({ diagram: diagKindRef, diagramData: diagDataRef });
   html += `${hasOverride ? '<div class="msg" style="background:#fff4e6; color:#e8590c;">Ce leçon a été modifié par rapport à sa version d\'origine.</div>' : ''}
     <div class="banniere jaune">🟡 Match à thème</div>
     ${leconEditFormHtml(leconId, '2', lecon.sa2)}
@@ -4100,6 +4461,7 @@ function adminLeconDetailHtml(leconId){
           <div id="ov-imgprevref" class="sub" style="margin-top:6px;"></div>
         </div>
       </div>
+      ${diagramPresetPickerHtml('ref', diagKindRef)}
     </div>
     <div class="card center">
       <button class="btn secondary" id="btn-modifier-lecon" onclick="debloquerEditionLeconUI()">✏️ Modifier l'exercice</button>
@@ -4200,7 +4562,7 @@ function leconEditFormHtml(leconId, suffix, sa){
   const esc = s => String(s||'').replace(/</g,'&lt;');
   const schemaActuel = sa.imageData
     ? `<img src="${sa.imageData}" style="max-width:100%; border-radius:8px;">`
-    : courtDiagram(sa.diagram);
+    : schemaHtmlFor(sa);
   return `<div class="card">
     <label>But</label><textarea class="ov-field" id="ov-but${suffix}" rows="2" disabled>${esc(sa.but)}</textarea>
     <label>Aménagement</label><textarea class="ov-field" id="ov-amenagement${suffix}" rows="2" disabled>${esc(sa.amenagement)}</textarea>
@@ -4222,6 +4584,7 @@ function leconEditFormHtml(leconId, suffix, sa){
         <div id="ov-imgprev${suffix}" class="sub" style="margin-top:6px;"></div>
       </div>
     </div>
+    ${diagramPresetPickerHtml(suffix, sa.diagram)}
     ${suffix==='2' ? `
     <label>Compteur adapté à la situation</label>
     <select class="ov-field" id="ov-scoremode" onchange="updateOverrideScoreModeUI()" disabled>
@@ -4260,6 +4623,23 @@ function previewOverrideImage(evt, suffix){
   reader.readAsDataURL(file);
 }
 
+// Lit le choix "schéma tout prêt" pour une situation donnée (suffix '1',
+// '2' ou 'ref') et l'ajoute à `data` si la case est cochée. `isUpdate`
+// doit être false à la création (Firestore refuse FieldValue.delete()
+// dans un premier enregistrement, puisqu'il n'y a encore rien à effacer).
+function appliquerChoixDiagramme_(data, suffix, champDiagram, champImage, isUpdate){
+  const cb = document.getElementById('ov-usediagram'+suffix);
+  if(cb && cb.checked){
+    const sel = document.getElementById('ov-diagram'+suffix);
+    const valeur = sel ? sel.value : 'full';
+    data[champDiagram] = valeur;
+    if(valeur === 'custom'){
+      data[champDiagram+'Data'] = JSON.stringify(OVERRIDE_DIAGRAM_DATA[suffix] || { players:[], zones:[], arrows:[] });
+    }
+    if(isUpdate) data[champImage] = firebase.firestore.FieldValue.delete();
+  }
+}
+
 function enregistrerSurchargeLeconUI(leconId){
   const msg = document.getElementById('ov-msg');
   const val = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
@@ -4274,6 +4654,9 @@ function enregistrerSurchargeLeconUI(leconId){
   if(OVERRIDE_IMAGE_DATA['1']) data.ImageData1 = OVERRIDE_IMAGE_DATA['1'];
   if(OVERRIDE_IMAGE_DATA['2']) data.ImageData2 = OVERRIDE_IMAGE_DATA['2'];
   if(OVERRIDE_IMAGE_DATA['ref']) data.ImageDataRef = OVERRIDE_IMAGE_DATA['ref'];
+  appliquerChoixDiagramme_(data, '1', 'Diagram1', 'ImageData1', true);
+  appliquerChoixDiagramme_(data, '2', 'Diagram2', 'ImageData2', true);
+  appliquerChoixDiagramme_(data, 'ref', 'DiagramRef', 'ImageDataRef', true);
 
   // Configuration du compteur ("Match à thème")
   const scoreMode = document.getElementById('ov-scoremode') ? document.getElementById('ov-scoremode').value : '';
@@ -4331,13 +4714,14 @@ function leconPersoFormWrapperHtml(leconId){
   const isNew = leconId === 'lecon-perso-new';
   const vide2 = { niveaux:[], but:'', amenagement:'', consignes:'', criteres:'', variables:{moins:'',plus:''}, diagram:'full', scoreMode:'direct', objectifCroise:'' };
   const vide1 = { niveaux:[], but:'', amenagement:'', consignes:'', criteres:'', variables:{moins:'',plus:''}, diagram:'full' };
-  let sa1 = vide1, sa2 = vide2, nomActuel = '', refBut = '', refRegle = '', refImg = null;
-  let themeIdActuel = ADMIN_BANQUE_THEME, docId = '';
+  let sa1 = vide1, sa2 = vide2, nomActuel = '', refBut = '', refRegle = '', refImg = null, refDiagram = 'full';
+  let themeIdActuel = ADMIN_BANQUE_THEME, docId = '', docActuel = null;
 
   if(!isNew){
     const tpId = leconId.replace('lecon-perso-','');
     const doc = LECONS_PERSONNALISES_CACHE.find(t=>t.ID===tpId);
     if(!doc) return '<p class="sub">Introuvable.</p>';
+    docActuel = doc;
     const found = findLecon(leconId);
     sa1 = found.lecon.sa1.but==='—' ? vide1 : found.lecon.sa1;
     sa2 = found.lecon.sa2.but==='—' ? vide2 : found.lecon.sa2;
@@ -4345,12 +4729,20 @@ function leconPersoFormWrapperHtml(leconId){
     refBut = doc.ButReference || '';
     refRegle = doc.RegleSpeciale || '';
     refImg = doc.ImageDataRef || null;
+    refDiagram = doc.DiagramRef || 'full';
     themeIdActuel = doc.ThemeID;
     docId = doc.ID;
   }
 
   // Réinitialisé : ne contiendra que les NOUVELLES images choisies dans ce formulaire.
   OVERRIDE_IMAGE_DATA = { '1': null, '2': null, 'ref': null };
+  // Pré-rempli avec les schémas personnalisés déjà enregistrés, pour pouvoir
+  // les modifier via l'éditeur sans repartir de zéro.
+  OVERRIDE_DIAGRAM_DATA = {
+    '1': sa1.diagram==='custom' ? sa1.diagramData : null,
+    '2': sa2.diagram==='custom' ? sa2.diagramData : null,
+    'ref': (refDiagram==='custom' && docActuel) ? parseJsonSafe_(docActuel.DiagramRefData) : null
+  };
 
   const esc = s => String(s||'').replace(/</g,'&lt;');
   let html = `<p class="link" onclick="ADMIN_BANQUE_LECON=null; renderAdminBanqueMenu();">&larr; retour au thème</p>
@@ -4375,7 +4767,7 @@ function leconPersoFormWrapperHtml(leconId){
       <div class="row">
         <div>
           <p class="sub" style="margin:0 0 4px;">Actuellement utilisé</p>
-          ${refImg ? `<img src="${refImg}" style="max-width:100%; border-radius:8px;">` : courtDiagram('full')}
+          ${refImg ? `<img src="${refImg}" style="max-width:100%; border-radius:8px;">` : schemaHtmlFor({ diagram: refDiagram, diagramData: OVERRIDE_DIAGRAM_DATA['ref'] })}
         </div>
         <div>
           <p class="sub" style="margin:0 0 4px;">Nouveau schéma (optionnel)</p>
@@ -4383,6 +4775,7 @@ function leconPersoFormWrapperHtml(leconId){
           <div id="ov-imgprevref" class="sub" style="margin-top:6px;"></div>
         </div>
       </div>
+      ${diagramPresetPickerHtml('ref', refDiagram)}
     </div>
     <div class="card center">
       <button class="btn" onclick="enregistrerLeconPersonaliseUI('${docId}')">✓ ${isNew?'Créer le leçon':'Enregistrer les modifications'}</button>
@@ -4413,6 +4806,9 @@ function enregistrerLeconPersonaliseUI(id){
   if(OVERRIDE_IMAGE_DATA['1']) data.ImageData1 = OVERRIDE_IMAGE_DATA['1'];
   if(OVERRIDE_IMAGE_DATA['2']) data.ImageData2 = OVERRIDE_IMAGE_DATA['2'];
   if(OVERRIDE_IMAGE_DATA['ref']) data.ImageDataRef = OVERRIDE_IMAGE_DATA['ref'];
+  appliquerChoixDiagramme_(data, '1', 'Diagram1', 'ImageData1', !!id);
+  appliquerChoixDiagramme_(data, '2', 'Diagram2', 'ImageData2', !!id);
+  appliquerChoixDiagramme_(data, 'ref', 'DiagramRef', 'ImageDataRef', !!id);
 
   const scoreMode = document.getElementById('ov-scoremode') ? document.getElementById('ov-scoremode').value : 'direct';
   data.ScoreMode2 = scoreMode;
@@ -4511,6 +4907,7 @@ function renderAdminBanque(c){
       <label>Image / schéma (optionnel)</label>
       <input type="file" id="ex-image" accept="image/*" onchange="previewExerciceImage(event)">
       <div id="ex-image-preview" class="sub" style="margin-bottom:10px;"></div>
+      ${diagramPresetPickerHtml('ex', 'full').replace(/class="ov-field" /g,'').replace(/ disabled/g,'')}
 
       <div id="ex-scoremode-section">
         <label>Compteur adapté à la situation</label>
@@ -4625,6 +5022,11 @@ function modifierExerciceUI(id){
   EX_IMAGE_DATA = ex.ImageData || null;
   document.getElementById('ex-image-preview').innerHTML = EX_IMAGE_DATA
     ? `<img src="${EX_IMAGE_DATA}" style="max-width:220px; border-radius:8px; margin-top:6px;">` : '';
+  EX_DIAGRAM_ACTUEL = ex.Diagram || 'full';
+  try{ EX_DIAGRAM_CUSTOM_DATA = ex.DiagramData ? JSON.parse(ex.DiagramData) : null; }catch(e){ EX_DIAGRAM_CUSTOM_DATA = null; }
+  document.getElementById('ov-diagramex').innerHTML = diagramPresetOptionsHtml(EX_DIAGRAM_ACTUEL);
+  document.getElementById('ov-usediagramex').checked = false;
+  updateDiagramPreview_('ex');
 
   updateExerciceTypeUI();
   if(ex.Type === 'match'){
@@ -4650,6 +5052,10 @@ function annulerEditionExerciceUI(){
   document.getElementById('ex-image').value = '';
   document.getElementById('ex-image-preview').innerHTML = '';
   EX_IMAGE_DATA = null;
+  EX_DIAGRAM_ACTUEL = 'full';
+  EX_DIAGRAM_CUSTOM_DATA = null;
+  document.getElementById('ov-diagramex').innerHTML = diagramPresetOptionsHtml('full');
+  document.getElementById('ov-usediagramex').checked = false;
   document.getElementById('ex-msg').innerHTML = '';
 }
 
@@ -4657,6 +5063,7 @@ function annulerEditionExerciceUI(){
    Formulaire de création d'exercice personnalisé
    ------------------------------------------------------------ */
 let EX_IMAGE_DATA = null;
+let EX_DIAGRAM_ACTUEL = 'full';
 
 function updateExerciceTypeUI(){
   const type = document.getElementById('ex-type').value;
@@ -4806,11 +5213,20 @@ function creerExerciceUI(){
     }
   }
 
+  const useDiagram = document.getElementById('ov-usediagramex') && document.getElementById('ov-usediagramex').checked;
+  const diagramChoisi = document.getElementById('ov-diagramex') ? document.getElementById('ov-diagramex').value : 'full';
+  if(useDiagram && diagramChoisi === 'custom' && !EX_DIAGRAM_CUSTOM_DATA){
+    msg.innerHTML = '<div class="msg err">Créez d\'abord un schéma personnalisé avec l\'éditeur (bouton "🎨 Créer / modifier un schéma"), ou choisissez un schéma tout prêt.</div>';
+    return;
+  }
+
   const ex = {
     Nom: nom, ThemeID: themeId, Type: type,
     But: but, Amenagement: amenagement, Consignes: consignes, CriteresTexte: criteres,
     VariablesMoins: varMoins || '—', VariablesPlus: varPlus || '—',
-    ImageData: EX_IMAGE_DATA || '',
+    ImageData: useDiagram ? '' : (EX_IMAGE_DATA || ''),
+    Diagram: useDiagram ? diagramChoisi : (EX_DIAGRAM_ACTUEL || 'full'),
+    DiagramData: (useDiagram && diagramChoisi==='custom') ? JSON.stringify(EX_DIAGRAM_CUSTOM_DATA) : '',
     ScoreMode: scoreMode, ScoreModeConfig: JSON.stringify(scoreModeConfig)
   };
 
