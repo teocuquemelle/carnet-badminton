@@ -4536,12 +4536,13 @@ function creerThemeUI(){
   createThemeCustom(nom, couleur).then(()=>{
     document.getElementById('chap-nom').value = '';
     chargerListeThemesCustom();
+    renderAdminBanqueMenu();
   }).catch(gsFail);
 }
 
 function supprimerThemeUI(id){
   if(!confirm("Supprimer ce thème personnalisé ? Les exercices déjà créés dedans resteront, mais n'apparaîtront plus regroupés correctement tant qu'ils ne sont pas réattribués à un autre thème.")) return;
-  deleteThemeCustom(id).then(()=>chargerListeThemesCustom()).catch(gsFail);
+  deleteThemeCustom(id).then(()=>{ chargerListeThemesCustom(); renderAdminBanqueMenu(); }).catch(gsFail);
 }
 
 
